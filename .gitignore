@@ -1,1 +1,14 @@
-target
+# Rust build files
+/target/
+
+# IDE/editor files
+*.swp
+*.swo
+*.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+# Lambda build artifacts
+bootstrap
