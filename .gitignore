@@ -12,3 +12,7 @@
 
 # Lambda build artifacts
 bootstrap
+
+# Environment Variables
+*.env
+.env.*
