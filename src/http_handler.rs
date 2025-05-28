@@ -1,32 +1,39 @@
+use crate::openai_client::ask;
 use lambda_http::{Body, Error, Request, RequestExt, Response};
+use serde::Serialize;
 
-/// This is the main body for the function.
-/// Write your code inside it.
-/// There are some code example in the following URLs:
-/// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
+#[derive(Serialize)]
+struct Reply {
+    body: String,
+}
+
 pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
-    // Extract some useful information from the request
-    let who = event
+    let username = event
         .query_string_parameters_ref()
         .and_then(|params| params.first("name"))
-        .unwrap_or("world");
-    let message = format!("Hello {who}, this is an AWS Lambda HTTP request");
+        .unwrap_or("stranger");
 
-    // Return something that implements IntoResponse.
-    // It will be serialized to the right response event automatically by the runtime
+    let prompt =
+        format!("Please say a very warm welcome and hello to me, where my name is {username}");
+    let response = ask(&prompt).await.to_string();
+    let data = Reply {
+        body: response.clone(),
+    };
+
+    // Can we improve error handling?
     let resp = Response::builder()
         .status(200)
-        .header("content-type", "text/html")
-        .body(message.into())
-        .map_err(Box::new)?;
+        .header("content-type", "application/json")
+        .body(serde_json::to_string(&data)?.into())
+        .map_err(Box::new)?; // What does this do?
     Ok(resp)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
     use lambda_http::{Request, RequestExt};
+    use std::collections::HashMap;
 
     #[tokio::test]
     async fn test_generic_http_handler() {
@@ -49,8 +56,7 @@ mod tests {
         let mut query_string_parameters: HashMap<String, String> = HashMap::new();
         query_string_parameters.insert("name".into(), "teal-lambda".into());
 
-        let request = Request::default()
-            .with_query_string_parameters(query_string_parameters);
+        let request = Request::default().with_query_string_parameters(query_string_parameters);
 
         let response = function_handler(request).await.unwrap();
         assert_eq!(response.status(), 200);
