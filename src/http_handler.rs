@@ -1,4 +1,4 @@
-use crate::openai_client::ask;
+use crate::gemini::ask_gemini;
 use lambda_http::{Body, Error, Request, RequestExt, Response};
 use serde::Serialize;
 
@@ -13,19 +13,19 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
         .and_then(|params| params.first("name"))
         .unwrap_or("stranger");
 
-    let prompt =
-        format!("Please say a very warm welcome and hello to me, where my name is {username}");
-    let response = ask(&prompt).await.to_string();
-    let data = Reply {
-        body: response.clone(),
-    };
+    let answer = ask_gemini(&format!(
+        "Please say a very warm welcome and hello to me, where my name is {username}"
+    ))
+    .await?;
+    let data = Reply { body: answer };
 
-    // Can we improve error handling?
+    // TODO: Improve error handling
     let resp = Response::builder()
         .status(200)
         .header("content-type", "application/json")
         .body(serde_json::to_string(&data)?.into())
         .map_err(Box::new)?; // What does this do?
+
     Ok(resp)
 }
 
