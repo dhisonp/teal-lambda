@@ -1,31 +1,34 @@
-use crate::gemini::ask_gemini;
+use crate::gemini;
 use lambda_http::{Body, Error, Request, RequestExt, Response};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 struct Reply {
     body: String,
 }
 
+#[derive(Serialize, Deserialize)]
+struct RequestBody {
+    text: String,
+}
+
 pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
-    let username = event
-        .query_string_parameters_ref()
+    let params = event.query_string_parameters_ref();
+    let body: RequestBody = serde_json::from_slice(event.body())?;
+    let username = &params
         .and_then(|params| params.first("name"))
-        .unwrap_or("stranger");
+        .unwrap_or("Stranger");
 
-    let answer = ask_gemini(&format!(
-        "Please say a very warm welcome and hello to me, where my name is {username}"
-    ))
-    .await?;
-    let data = Reply { body: answer };
+    let answer = gemini::tell(&username, &body.text, None).await?;
+    let data = Reply { body: answer }; // TODO: Define struct and handle response construction elsewhere
 
-    let resp = Response::builder()
+    let res = Response::builder()
         .status(200)
         .header("content-type", "application/json")
         .body(serde_json::to_string(&data)?.into())
         .map_err(Box::new)?;
 
-    Ok(resp)
+    Ok(res)
 }
 
 // TODO: Do not forget to update tests upon MVP

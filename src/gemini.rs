@@ -1,5 +1,5 @@
-use dotenvy::Error;
 use serde::Deserialize;
+use std::fmt;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,15 +24,26 @@ pub struct Part {
     pub text: String,
 }
 
-struct Context {
+pub struct Context {
     pub mood: String,                 // TODO: Define set of moods
     pub summary: String,              // A summary of the user's current state of mind
     pub summary_history: Vec<String>, // History of past summaries
     pub tell_history: Vec<String>,    // History of past Tells
 }
 
+impl fmt::Display for Context {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "My current mood: {}. My current situation: {}. My past situations: {}. My past tells to you: {}.",
+        self.mood,
+        self.summary,
+        self.summary_history.join(", "),
+        self.tell_history.join(", "),
+        )
+    }
+}
+
 /// Receives a prompt argument and returns a direct reply from Gemini.
-pub(crate) async fn ask_gemini(prompt: &str) -> Result<String, reqwest::Error> {
+async fn ask_gemini(prompt: &str) -> anyhow::Result<String> {
     let url = format!(
         "{}?key={}",
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
@@ -83,6 +94,40 @@ pub(crate) async fn ask_gemini(prompt: &str) -> Result<String, reqwest::Error> {
     Ok(text)
 }
 
-pub(crate) fn tell(username: &str, tell: &str, context: Option<Content>) -> Result<String, Error> {
-    Ok("".to_string())
+/// Tells Teal what the user is feeling, and Teal will return with a very benevolent response– like the color teal!
+/// Optionally takes `context` for now, but this shouldn't be needed in most cases.
+pub(crate) async fn tell(
+    username: &str,
+    tell: &str,
+    context: Option<Context>,
+) -> anyhow::Result<String> {
+    let context = context.unwrap_or_else(|| get_context());
+    let prompt = format!(
+        "My name is {}. Here is a context of my past conversations with you: {} (if I sent you no context, then this is our first conversation!). However, I have something to tell you about. {}. What do you think?",
+        username,
+        context.to_string(),
+        tell,
+    );
+
+    let res = ask_gemini(&prompt).await?;
+    Ok(res.to_string())
+}
+
+/// Generate a Context object to be passed into tell() from the database.
+fn get_context() -> Context {
+    Context {
+            mood: "contemplative".to_string(),
+            summary: "User is currently happy, albeit with some doubts on his career.".to_string(),
+            summary_history: vec![
+                "User was feeling overwhelmed about work-life balance".to_string(),
+                "User expressed excitement about a new project but worried about time management"
+                    .to_string(),
+                "User felt confident after completing a challenging task".to_string(),
+            ],
+            tell_history: vec![
+                "I think while growth come with doubt, I'm feeling happy and there will be some potential interviews I'll be going this week.".to_string(),
+                "You've successfully handled similar challenges before. A job will come to you if you truly believe in your own work.".to_string(),
+                "It's getting tough. I'm confident and I know I can deliver, but why am I not getting jobs? It's becoming tough, to be fair.".to_string(),
+            ],
+    }
 }
