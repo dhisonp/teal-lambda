@@ -45,7 +45,7 @@ pub(crate) async fn ask_gemini(prompt: &str) -> Result<String, reqwest::Error> {
     });
 
     let client = reqwest::Client::new();
-    let res = client.post(&url).json(&data).send().await?;
+    let res = client.post(&url).json(&data).send().await?.error_for_status()?;
     let body: GeminiResponse = res.json().await?;
 
     let text = body
@@ -53,10 +53,9 @@ pub(crate) async fn ask_gemini(prompt: &str) -> Result<String, reqwest::Error> {
         .as_ref()
         .and_then(|c| c.first())
         .and_then(|c| c.content.parts.first())
-        .map(|p| p.text.as_str());
+        .map(|p| p.text.as_str())
+        .unwrap_or("Gemini is not in a mood today")
+        .to_string();
 
-    match text {
-        Some(t) => Ok(t.to_string()),
-        None => Ok("Error".to_string()), // TODO: Raise actual error here
-    }
+    Ok(text)
 }
