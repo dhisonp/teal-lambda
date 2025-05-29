@@ -19,12 +19,11 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     .await?;
     let data = Reply { body: answer };
 
-    // TODO: Improve error handling
     let resp = Response::builder()
         .status(200)
         .header("content-type", "application/json")
         .body(serde_json::to_string(&data)?.into())
-        .map_err(Box::new)?; // What does this do?
+        .map_err(Box::new)?;
 
     Ok(resp)
 }
