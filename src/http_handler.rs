@@ -28,6 +28,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     Ok(resp)
 }
 
+// TODO: Do not forget to update tests upon MVP
 #[cfg(test)]
 mod tests {
     use super::*;
