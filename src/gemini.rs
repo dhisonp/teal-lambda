@@ -1,3 +1,4 @@
+use dotenvy::Error;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -21,6 +22,13 @@ pub struct Content {
 #[derive(Deserialize)]
 pub struct Part {
     pub text: String,
+}
+
+struct Context {
+    pub mood: String,                 // TODO: Define set of moods
+    pub summary: String,              // A summary of the user's current state of mind
+    pub summary_history: Vec<String>, // History of past summaries
+    pub tell_history: Vec<String>,    // History of past Tells
 }
 
 /// Receives a prompt argument and returns a direct reply from Gemini.
@@ -73,4 +81,8 @@ pub(crate) async fn ask_gemini(prompt: &str) -> Result<String, reqwest::Error> {
         .to_string();
 
     Ok(text)
+}
+
+pub(crate) fn tell(username: &str, tell: &str, context: Option<Content>) -> Result<String, Error> {
+    Ok("".to_string())
 }
