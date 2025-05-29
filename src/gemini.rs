@@ -31,7 +31,6 @@ pub(crate) async fn ask_gemini(prompt: &str) -> Result<String, reqwest::Error> {
         std::env::var("GEMINI_API_KEY").expect("GEMINI_API_KEY not set")
     );
 
-    // TODO: Configure options
     let data = serde_json::json!({
         "contents": [
             {
@@ -41,11 +40,27 @@ pub(crate) async fn ask_gemini(prompt: &str) -> Result<String, reqwest::Error> {
                     }
                 ]
             }
-        ]
+        ],
+        "system_instruction": {
+            "parts": [
+                {
+                    "text": "Speak an assertive, yet encouraging and soft-spoken, as if you're a therapist talking to a perfectly sane and healthy adult. Do not ask questions, and be concise and decisive with your answers."
+                }
+            ]
+        },
+        "generationConfig": {
+            "temperature": 0.5,
+            "maxOutputTokens": 500,
+        }
     });
 
     let client = reqwest::Client::new();
-    let res = client.post(&url).json(&data).send().await?.error_for_status()?;
+    let res = client
+        .post(&url)
+        .json(&data)
+        .send()
+        .await?
+        .error_for_status()?;
     let body: GeminiResponse = res.json().await?;
 
     let text = body
