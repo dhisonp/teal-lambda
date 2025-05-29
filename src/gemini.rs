@@ -3,7 +3,7 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GeminiResponse {
-    pub candidates: Vec<Candidate>,
+    pub candidates: Option<Vec<Candidate>>,
 }
 
 #[derive(Deserialize)]
@@ -27,9 +27,11 @@ pub struct Part {
 pub(crate) async fn ask_gemini(prompt: &str) -> Result<String, reqwest::Error> {
     let url = format!(
         "{}?key={}",
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
         std::env::var("GEMINI_API_KEY").expect("GEMINI_API_KEY not set")
     );
+
+    // TODO: Configure options
     let data = serde_json::json!({
         "contents": [
             {
@@ -45,12 +47,16 @@ pub(crate) async fn ask_gemini(prompt: &str) -> Result<String, reqwest::Error> {
     let client = reqwest::Client::new();
     let res = client.post(&url).json(&data).send().await?;
     let body: GeminiResponse = res.json().await?;
+
     let text = body
         .candidates
-        .first()
+        .as_ref()
+        .and_then(|c| c.first())
         .and_then(|c| c.content.parts.first())
-        .map(|p| p.text.as_str())
-        .unwrap_or("Gemini is not in the mood today.");
+        .map(|p| p.text.as_str());
 
-    Ok(text.to_string())
+    match text {
+        Some(t) => Ok(t.to_string()),
+        None => Ok("Error".to_string()), // TODO: Raise actual error here
+    }
 }
