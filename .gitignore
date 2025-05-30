@@ -15,4 +15,3 @@ bootstrap
 
 # Environment Variables
 *.env
-.env.*
