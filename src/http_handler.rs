@@ -40,7 +40,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     let path = event.uri().path();
 
     match (method, path) {
-        (&http::Method::POST, "/tell") => teal_tell(event).await,
+        (&http::Method::POST, "/tell") => post_tell(event).await,
         _ => {
             let data = ResponseBody {
                 tell: None,
@@ -57,7 +57,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     }
 }
 
-async fn teal_tell(event: Request) -> Result<Response<Body>, Error> {
+async fn post_tell(event: Request) -> Result<Response<Body>, Error> {
     let (username, body) = match parse_request(&event) {
         Ok(data) => data,
         Err(msg) => {
