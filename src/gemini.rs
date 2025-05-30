@@ -131,3 +131,27 @@ fn get_context() -> Context {
             ],
     }
 }
+
+/// Generate a summarized sentence of a generated Tell.
+pub(crate) async fn summarize_tell(tell: &str) -> anyhow::Result<String> {
+    let prompt = format!(
+        "Please summarize this to a single, concise single sentence: {}. This is for record keeping purposes, so write in third-person. Limit to concisely 12 words.",
+        &tell
+    );
+    let res = ask_gemini(&prompt).await?;
+    Ok(res)
+}
+
+pub(crate) async fn generate_state(
+    context: Option<Context>,
+    summary: Option<&str>,
+) -> anyhow::Result<String> {
+    let prompt = format!(
+        "Please summarize the user's current state of mind, based on the history: {}. Also account their latest conversation summary to you, if any: {}. This is for record keeping, so do not reference the user. Limit concisely to 12 words.",
+        context.unwrap_or(get_context()).to_string(),
+        summary.unwrap_or("None for now!"),
+    );
+
+    let res = ask_gemini(&prompt).await?;
+    Ok(res)
+}

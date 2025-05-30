@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize)]
 struct ResponseBody {
     tell: Option<String>,
+    summary: Option<String>,
+    state: Option<String>,
     error_message: Option<String>,
 }
 
@@ -37,9 +39,12 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     let (username, body) = match parse_request(&event) {
         Ok(data) => data,
         Err(msg) => {
+            // Is there a way to not include None keys?
             let data = ResponseBody {
                 tell: None,
                 error_message: Some(msg),
+                state: None,
+                summary: None,
             };
             return Ok(Response::builder()
                 .status(422)
@@ -49,9 +54,14 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
         }
     };
 
+    // TODO: Delegate business logic elsewhere, not the controller
     let answer = gemini::tell(&username, &body.text, None).await?;
+    let summary = gemini::summarize_tell(&answer).await?;
+    let state = gemini::generate_state(None, Some(&summary)).await?;
     let data = ResponseBody {
         tell: Some(answer),
+        summary: Some(summary),
+        state: Some(state),
         error_message: None,
     };
 
