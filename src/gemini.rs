@@ -142,6 +142,7 @@ pub(crate) async fn summarize_tell(tell: &str) -> anyhow::Result<String> {
     Ok(res)
 }
 
+/// Evaluate the current state of the user based on existing or given context, optionally with the latest summary.
 pub(crate) async fn generate_state(
     context: Option<Context>,
     summary: Option<&str>,
