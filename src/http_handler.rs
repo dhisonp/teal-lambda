@@ -21,10 +21,10 @@ struct RequestPostUserCreate {
     name: String,
 }
 
-#[derive(Serialize)]
-struct ResponsePostUserCreate {
-    message: String,
-}
+// #[derive(Serialize)]
+// struct ResponsePostUserCreate {
+//     message: String,
+// }
 
 pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let method = event.method();
