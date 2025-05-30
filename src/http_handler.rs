@@ -3,8 +3,9 @@ use lambda_http::{Body, Error, Request, RequestExt, Response};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
-struct Reply {
-    body: String,
+struct ResponseBody {
+    tell: Option<String>,
+    error_message: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -12,15 +13,47 @@ struct RequestBody {
     text: String,
 }
 
+fn parse_request(event: &Request) -> Result<(String, RequestBody), String> {
+    if event.body().is_empty() {
+        return Err("Request body required".to_string());
+    }
+
+    let body: RequestBody =
+        serde_json::from_slice(event.body()).map_err(|_| "Invalid JSON body")?;
+    if body.text.trim().is_empty() {
+        return Err("text cannot be an empty string".to_string());
+    }
+
+    let username = event
+        .query_string_parameters_ref()
+        .and_then(|p| p.first("name"))
+        .ok_or("name parameter is required")?
+        .to_string();
+
+    Ok((username, body))
+}
+
 pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
-    let params = event.query_string_parameters_ref();
-    let body: RequestBody = serde_json::from_slice(event.body())?;
-    let username = &params
-        .and_then(|params| params.first("name"))
-        .unwrap_or("Stranger");
+    let (username, body) = match parse_request(&event) {
+        Ok(data) => data,
+        Err(msg) => {
+            let data = ResponseBody {
+                tell: None,
+                error_message: Some(msg),
+            };
+            return Ok(Response::builder()
+                .status(422)
+                .header("content-type", "application/json")
+                .body(serde_json::to_string(&data)?.into())
+                .map_err(Box::new)?);
+        }
+    };
 
     let answer = gemini::tell(&username, &body.text, None).await?;
-    let data = Reply { body: answer }; // TODO: Define struct and handle response construction elsewhere
+    let data = ResponseBody {
+        tell: Some(answer),
+        error_message: None,
+    };
 
     let res = Response::builder()
         .status(200)
