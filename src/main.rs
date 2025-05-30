@@ -14,6 +14,7 @@ async fn main() -> Result<(), Error> {
     // TODO: Do not load .env in production
     dotenvy::dotenv()?;
 
+    // TODO: Find a way to share instance with other files
     let db = dynamo::DynamoClient::init().await;
     db.check_create_table().await?;
     match db.ping().await {
@@ -23,14 +24,6 @@ async fn main() -> Result<(), Error> {
             return Err(Error::from(e));
         }
     }
-
-    // NOTE: Just a test function to check DynamoDB Connection
-    let obj = serde_json::json!({
-        "tealant_id": "01", // This must match your table's primary key name
-        "foo": "bar",
-        "number": 42
-    });
-    db.put(obj).await?;
 
     run(service_fn(function_handler)).await
 }

@@ -1,9 +1,6 @@
 use aws_sdk_dynamodb::{
     operation::create_table::CreateTableOutput,
-    types::{
-        AttributeDefinition, AttributeValue, BillingMode, KeySchemaElement, KeyType,
-        ScalarAttributeType,
-    },
+    types::{AttributeDefinition, BillingMode, KeySchemaElement, KeyType, ScalarAttributeType},
     Client, Error,
 };
 use serde_dynamo::to_item;
@@ -13,7 +10,7 @@ pub struct DynamoClient {
 }
 
 const TABLE_NAME: &str = "teal-db";
-const KEY: &str = "tealant_id";
+pub const KEY: &str = "tealant_id";
 
 impl DynamoClient {
     pub async fn init() -> Self {
