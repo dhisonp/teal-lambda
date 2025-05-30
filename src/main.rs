@@ -15,6 +15,7 @@ async fn main() -> Result<(), Error> {
     dotenvy::dotenv()?;
 
     let db = dynamo::DynamoClient::init().await;
+    db.check_create_table().await?;
     match db.ping().await {
         Ok(_) => println!("DynamoDB connected"),
         Err(e) => {
@@ -24,12 +25,12 @@ async fn main() -> Result<(), Error> {
     }
 
     // NOTE: Just a test function to check DynamoDB Connection
-    let obj = serde_json::json!({
-        "teal": "teal", // This must match your table's primary key name
-        "foo": "bar",
-        "number": 42
-    });
-    db.put("teal", obj).await?;
+    // let obj = serde_json::json!({
+    //     "teal": "teal", // This must match your table's primary key name
+    //     "foo": "bar",
+    //     "number": 42
+    // });
+    // db.put("teal", obj).await?;
 
     run(service_fn(function_handler)).await
 }
