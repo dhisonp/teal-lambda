@@ -1,5 +1,5 @@
 use crate::gemini;
-use lambda_http::{Body, Error, Request, RequestExt, Response};
+use lambda_http::{http, Body, Error, Request, RequestExt, Response};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
@@ -36,6 +36,28 @@ fn parse_request(event: &Request) -> Result<(String, RequestBody), String> {
 }
 
 pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+    let method = event.method();
+    let path = event.uri().path();
+
+    match (method, path) {
+        (&http::Method::POST, "/tell") => teal_tell(event).await,
+        _ => {
+            let data = ResponseBody {
+                tell: None,
+                error_message: Some("Route does not exist".to_string()),
+                state: None,
+                summary: None,
+            };
+            return Ok(Response::builder()
+                .status(http::StatusCode::NOT_FOUND)
+                .header("content-type", "application/json")
+                .body(serde_json::to_string(&data)?.into())
+                .map_err(Box::new)?);
+        }
+    }
+}
+
+async fn teal_tell(event: Request) -> Result<Response<Body>, Error> {
     let (username, body) = match parse_request(&event) {
         Ok(data) => data,
         Err(msg) => {
@@ -47,7 +69,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
                 summary: None,
             };
             return Ok(Response::builder()
-                .status(422)
+                .status(http::StatusCode::UNPROCESSABLE_ENTITY)
                 .header("content-type", "application/json")
                 .body(serde_json::to_string(&data)?.into())
                 .map_err(Box::new)?);
@@ -66,7 +88,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     };
 
     let res = Response::builder()
-        .status(200)
+        .status(http::StatusCode::OK)
         .header("content-type", "application/json")
         .body(serde_json::to_string(&data)?.into())
         .map_err(Box::new)?;
