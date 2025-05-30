@@ -74,10 +74,13 @@ impl DynamoClient {
         Ok(true)
     }
 
-    pub async fn put(&self, key: &str, item: serde_json::Value) -> anyhow::Result<bool> {
+    pub async fn put(&self, item: serde_json::Value) -> anyhow::Result<bool> {
         let _item = to_item(item)?;
-        let av = AttributeValue::M(_item);
-        let req = self.client.put_item().table_name(TABLE_NAME).item(key, av);
+        let req = self
+            .client
+            .put_item()
+            .table_name(TABLE_NAME)
+            .set_item(Some(_item));
 
         req.send().await?;
         Ok(true)
