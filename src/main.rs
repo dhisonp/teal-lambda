@@ -14,7 +14,6 @@ async fn main() -> Result<(), Error> {
     // TODO: Do not load .env in production
     dotenvy::dotenv()?;
 
-    // TODO: Find a way to share instance with other files
     let db = dynamo::DynamoClient::init().await;
     db.check_create_table().await?;
     match db.ping().await {
@@ -24,6 +23,7 @@ async fn main() -> Result<(), Error> {
             return Err(Error::from(e));
         }
     }
+    dynamo::init_global_db(db); // Store the DynamoDB client in a global OnceLock
 
     run(service_fn(function_handler)).await
 }

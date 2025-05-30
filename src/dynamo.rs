@@ -4,6 +4,7 @@ use aws_sdk_dynamodb::{
     Client, Error,
 };
 use serde_dynamo::to_item;
+use std::sync::{Arc, OnceLock};
 
 pub struct DynamoClient {
     client: Client,
@@ -11,6 +12,16 @@ pub struct DynamoClient {
 
 const TABLE_NAME: &str = "teal-db";
 pub const KEY: &str = "tealant_id";
+
+static DB_CLIENT: OnceLock<Arc<DynamoClient>> = OnceLock::new();
+
+pub fn init_global_db(client: DynamoClient) {
+    DB_CLIENT.set(Arc::new(client)).ok();
+}
+
+pub fn get_global_db() -> &'static Arc<DynamoClient> {
+    DB_CLIENT.get().expect("Database not initialized")
+}
 
 impl DynamoClient {
     pub async fn init() -> Self {

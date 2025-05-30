@@ -1,9 +1,15 @@
-use crate::gemini;
+use crate::users::create_user;
+use crate::{gemini, users::User};
 use lambda_http::{http, Body, Error, Request, RequestExt, Response};
 use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize)]
+struct RequestTellBody {
+    text: String,
+}
+
 #[derive(Serialize)]
-struct ResponseBody {
+struct ResponseTellBody {
     tell: Option<String>,
     summary: Option<String>,
     state: Option<String>,
@@ -11,28 +17,13 @@ struct ResponseBody {
 }
 
 #[derive(Serialize, Deserialize)]
-struct RequestBody {
-    text: String,
+struct RequestPostUserCreate {
+    name: String,
 }
 
-fn parse_request(event: &Request) -> Result<(String, RequestBody), String> {
-    if event.body().is_empty() {
-        return Err("Request body required".to_string());
-    }
-
-    let body: RequestBody =
-        serde_json::from_slice(event.body()).map_err(|_| "Invalid JSON body")?;
-    if body.text.trim().is_empty() {
-        return Err("text cannot be an empty string".to_string());
-    }
-
-    let username = event
-        .query_string_parameters_ref()
-        .and_then(|p| p.first("name"))
-        .ok_or("name parameter is required")?
-        .to_string();
-
-    Ok((username, body))
+#[derive(Serialize)]
+struct ResponsePostUserCreate {
+    message: String,
 }
 
 pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
@@ -41,8 +32,9 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
 
     match (method, path) {
         (&http::Method::POST, "/tell") => post_tell(event).await,
+        (&http::Method::POST, "/user/create") => post_user_create(event).await,
         _ => {
-            let data = ResponseBody {
+            let data = ResponseTellBody {
                 tell: None,
                 error_message: Some("Route does not exist".to_string()),
                 state: None,
@@ -58,11 +50,31 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
 }
 
 async fn post_tell(event: Request) -> Result<Response<Body>, Error> {
+    fn parse_request(event: &Request) -> Result<(String, RequestTellBody), String> {
+        if event.body().is_empty() {
+            return Err("Request body required".to_string());
+        }
+
+        let body: RequestTellBody =
+            serde_json::from_slice(event.body()).map_err(|_| "Invalid JSON body")?;
+        if body.text.trim().is_empty() {
+            return Err("text cannot be an empty string".to_string());
+        }
+
+        let username = event
+            .query_string_parameters_ref()
+            .and_then(|p| p.first("name"))
+            .ok_or("name parameter is required")?
+            .to_string();
+
+        Ok((username, body))
+    }
+
     let (username, body) = match parse_request(&event) {
         Ok(data) => data,
         Err(msg) => {
             // Is there a way to not include None keys?
-            let data = ResponseBody {
+            let data = ResponseTellBody {
                 tell: None,
                 error_message: Some(msg),
                 state: None,
@@ -80,7 +92,7 @@ async fn post_tell(event: Request) -> Result<Response<Body>, Error> {
     let answer = gemini::tell(&username, &body.text, None).await?;
     let summary = gemini::summarize_tell(&answer).await?;
     let state = gemini::generate_state(None, Some(&summary)).await?;
-    let data = ResponseBody {
+    let data = ResponseTellBody {
         tell: Some(answer),
         summary: Some(summary),
         state: Some(state),
@@ -89,6 +101,39 @@ async fn post_tell(event: Request) -> Result<Response<Body>, Error> {
 
     let res = Response::builder()
         .status(http::StatusCode::OK)
+        .header("content-type", "application/json")
+        .body(serde_json::to_string(&data)?.into())
+        .map_err(Box::new)?;
+
+    Ok(res)
+}
+
+/// Creates a new user.
+/// TODO: Handle errors gracefully.
+async fn post_user_create(event: Request) -> Result<Response<Body>, Error> {
+    // TODO: Determine what should be here!
+    // let path_param = event.path_parameters_ref();
+    // if path_param.map_or(true, |p| p.is_empty()) {
+    //     return Err("Invalid path parameter".into());
+    // }
+    let body: RequestPostUserCreate =
+        serde_json::from_slice(event.body()).map_err(|_| "Invalid JSON body")?;
+
+    let data = User {
+        tealant_id: uuid::Uuid::new_v4().to_string(),
+        name: body.name,
+        created_at: chrono::Utc::now().to_rfc3339(),
+        current_mood: None,
+        current_state: None,
+        summary_history: None,
+        tell_history: None,
+    };
+
+    create_user(&data).await?;
+
+    // TODO: Correct response format
+    let res = Response::builder()
+        .status(http::StatusCode::CREATED)
         .header("content-type", "application/json")
         .body(serde_json::to_string(&data)?.into())
         .map_err(Box::new)?;
