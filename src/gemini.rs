@@ -1,5 +1,5 @@
+use crate::schema::{self, Context};
 use serde::Deserialize;
-use std::fmt;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -22,24 +22,6 @@ pub struct Content {
 #[derive(Deserialize)]
 pub struct Part {
     pub text: String,
-}
-
-pub struct Context {
-    pub mood: String,                 // TODO: Define set of moods
-    pub summary: String,              // A summary of the user's current state of mind
-    pub summary_history: Vec<String>, // History of past summaries
-    pub tell_history: Vec<String>,    // History of past Tells
-}
-
-impl fmt::Display for Context {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "My current mood: {}. My current situation: {}. My past situations: {}. My past tells to you: {}.",
-        self.mood,
-        self.summary,
-        self.summary_history.join(", "),
-        self.tell_history.join(", "),
-        )
-    }
 }
 
 /// Receives a prompt argument and returns a direct reply from Gemini.
@@ -116,7 +98,7 @@ pub(crate) async fn tell(
 /// Generate a Context object to be passed into tell() from the database.
 fn get_context() -> Context {
     Context {
-            mood: "contemplative".to_string(),
+            mood: schema::Mood::Contemplative,
             summary: "User is currently happy, albeit with some doubts on his career.".to_string(),
             summary_history: vec![
                 "User was feeling overwhelmed about work-life balance".to_string(),

@@ -1,34 +1,38 @@
-use aws_sdk_dynamodb as dynamodb;
-use std::sync::Arc;
+use aws_sdk_dynamodb::{types::AttributeValue, Client, Error};
+use serde_dynamo::to_item;
 
 pub struct DynamoClient {
-    client: dynamodb::Client,
+    client: Client,
 }
+
+const TABLE_NAME: &str = "teal-db";
 
 impl DynamoClient {
     pub async fn init() -> Self {
         let config = aws_config::load_from_env().await;
-        let client = dynamodb::Client::new(&config);
+        let client = Client::new(&config);
         Self { client }
     }
 
-    pub fn from_client(client: dynamodb::Client) -> Self {
-        Self { client }
+    pub async fn ping(&self) -> Result<bool, Error> {
+        self.client
+            .describe_table()
+            .table_name(TABLE_NAME)
+            .send()
+            .await?;
+
+        Ok(true)
     }
 
-    pub async fn list_tables(&self) -> Result<Vec<String>, dynamodb::Error> {
-        let paginator = self.client.list_tables().into_paginator().items().send();
-        let table_names = paginator.collect::<Result<Vec<_>, _>>().await?;
+    pub async fn put(&self, key: &str, item: serde_json::Value) -> anyhow::Result<bool> {
+        let _item = to_item(item)?;
+        let av = AttributeValue::M(_item);
+        let req = self.client.put_item().table_name(TABLE_NAME).item(key, av);
 
-        println!("Tables:");
-        for name in &table_names {
-            println!("  {}", name);
-        }
-        println!("Found {} tables", table_names.len());
-
-        Ok(table_names)
+        req.send().await?;
+        Ok(true)
     }
 }
 
-/// Global database client instance (optional pattern for Lambda)
-pub type SharedDatabaseClient = Arc<DynamoClient>;
+// Global database client instance (optional pattern for Lambda)
+// pub type SharedDatabaseClient = Arc<DynamoClient>;
