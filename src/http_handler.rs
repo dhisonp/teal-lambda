@@ -89,6 +89,7 @@ async fn post_tell(event: Request) -> Result<Response<Body>, Error> {
     };
 
     // TODO: Delegate business logic elsewhere, not the controller
+    // TODO: Do everything in a single call instead of one each
     let answer = gemini::tell(&username, &body.text, None).await?;
     let summary = gemini::summarize_tell(&answer).await?;
     let state = gemini::generate_state(None, Some(&summary)).await?;
