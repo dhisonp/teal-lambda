@@ -1,10 +1,11 @@
+use serde_json::to_value;
+
 use crate::{
-    dynamo::{self, USERS_TABLE_NAME},
+    dynamo::{use_db, USERS_TABLE_NAME},
     schema::User,
 };
 
 pub async fn create_user(data: &User) -> anyhow::Result<bool> {
-    let db = dynamo::use_db();
-    let user_json = serde_json::to_value(data)?;
-    db.put(USERS_TABLE_NAME, user_json).await
+    let db = use_db();
+    db.put(USERS_TABLE_NAME, to_value(data)?).await
 }
