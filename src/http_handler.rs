@@ -90,21 +90,24 @@ async fn post_tell(event: Request) -> Result<Response<Body>, Error> {
         }
     };
 
-    let answer = match tell(&username, &body.text, None).await {
-        Ok(data) => data,
-        Err(_) => {
-            // TODO: Refactor duplicate return error logic
-            let data = ResponseBody {
-                success: false,
-                error_message: Some("Oops! An error occurred when telling your story.".to_string()),
-            };
-            return Ok(Response::builder()
-                .status(http::StatusCode::UNPROCESSABLE_ENTITY)
-                .header("content-type", "application/json")
-                .body(serde_json::to_string(&data)?.into())
-                .map_err(Box::new)?);
-        }
-    };
+    // NOTE: This is commented due to bad logging/error display. Find a way to
+    //   better log errors and uncomment to allow for better client experience.
+    // let answer = match tell(&username, &body.text, None).await {
+    //     Ok(data) => data,
+    //     Err(_) => {
+    //         // TODO: Refactor duplicate return error logic
+    //         let data = ResponseBody {
+    //             success: false,
+    //             error_message: Some("Oops! An error occurred when telling your story.".to_string()),
+    //         };
+    //         return Ok(Response::builder()
+    //             .status(http::StatusCode::UNPROCESSABLE_ENTITY)
+    //             .header("content-type", "application/json")
+    //             .body(serde_json::to_string(&data)?.into())
+    //             .map_err(Box::new)?);
+    //     }
+    // };
+    let answer = tell(&username, &body.text, None).await?;
 
     let data = ResponseBodyTell {
         base: ResponseBody {
@@ -135,7 +138,7 @@ async fn post_user_create(event: Request) -> Result<Response<Body>, Error> {
         serde_json::from_slice(event.body()).map_err(|_| "Invalid JSON body")?;
 
     let data = User {
-        tealant_id: uuid::Uuid::new_v4().to_string(),
+        tid: uuid::Uuid::new_v4().to_string(),
         name: data.name,
         email: data.email,
         created_at: chrono::Utc::now().to_rfc3339(),

@@ -4,7 +4,7 @@ use std::fmt;
 // TODO: Storing OAuth2.0 credentials
 #[derive(Serialize)]
 pub struct User {
-    pub tealant_id: String,
+    pub tid: String,
     pub name: String,
     pub email: String,
     pub current_mood: Option<Mood>,

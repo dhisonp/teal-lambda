@@ -3,6 +3,7 @@ use crate::schema::{self, Context};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::to_value;
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,6 +30,7 @@ struct Part {
 
 #[derive(Serialize)]
 struct TellItem {
+    pub tid: String,
     pub username: String, // Should we use UIID instead of email/username here?
     pub answer: String,
     pub created_at: chrono::DateTime<Utc>,
@@ -105,6 +107,7 @@ pub(crate) async fn tell(
     let answer = res.to_string();
 
     let data = TellItem {
+        tid: Uuid::new_v4().to_string(),
         username: username.to_string(),
         answer: answer.clone(),
         created_at: chrono::Utc::now(),
@@ -112,9 +115,7 @@ pub(crate) async fn tell(
 
     // TODO: Address "service error"
     let db = use_db();
-    db.put(TELLS_TABLE_NAME, to_value(data)?)
-        .await
-        .inspect_err(|e| println!("gemini.tell err: {}", e))?;
+    db.put(TELLS_TABLE_NAME, to_value(data)?).await?;
 
     // TODO: Combine into one prompt
     // let summary = summarize_tell(&answer).await?;
