@@ -1,12 +1,14 @@
 use serde::Serialize;
 use std::fmt;
 
+// TODO: Storing OAuth2.0 credentials
 #[derive(Serialize)]
 pub struct User {
     pub tealant_id: String,
     pub name: String,
-    pub created_at: String,
+    pub email: String,
     pub current_mood: Option<Mood>,
+    pub created_at: String,
 }
 
 #[derive(Debug, Serialize)]

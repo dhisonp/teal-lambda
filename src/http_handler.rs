@@ -23,6 +23,7 @@ struct ResponseBodyTell {
 #[derive(Serialize, Deserialize)]
 struct RequestBodyPostUserCreate {
     name: String,
+    email: String,
 }
 
 // #[derive(Serialize)]
@@ -115,12 +116,13 @@ async fn post_user_create(event: Request) -> Result<Response<Body>, Error> {
     // if path_param.map_or(true, |p| p.is_empty()) {
     //     return Err("Invalid path parameter".into());
     // }
-    let body: RequestBodyPostUserCreate =
+    let data: RequestBodyPostUserCreate =
         serde_json::from_slice(event.body()).map_err(|_| "Invalid JSON body")?;
 
     let data = User {
         tealant_id: uuid::Uuid::new_v4().to_string(),
-        name: body.name,
+        name: data.name,
+        email: data.email,
         created_at: chrono::Utc::now().to_rfc3339(),
         current_mood: None,
     };
