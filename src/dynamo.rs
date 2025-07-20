@@ -1,7 +1,7 @@
 use aws_sdk_dynamodb::{
     operation::create_table::CreateTableOutput,
     types::{AttributeDefinition, BillingMode, KeySchemaElement, KeyType, ScalarAttributeType},
-    Client, Error,
+    Client,
 };
 use serde_dynamo::to_item;
 use std::sync::{Arc, OnceLock};
@@ -12,7 +12,7 @@ pub struct DynamoClient {
 
 pub const USERS_TABLE_NAME: &str = "teal-users";
 pub const TELLS_TABLE_NAME: &str = "teal-tells";
-pub const KEY: &str = "tealant_id";
+pub const KEY: &str = "tid";
 
 static DB_CLIENT: OnceLock<Arc<DynamoClient>> = OnceLock::new();
 
@@ -73,7 +73,7 @@ impl DynamoClient {
         Ok(true)
     }
 
-    pub async fn ping(&self) -> Result<bool, Error> {
+    pub async fn ping(&self) -> Result<bool, aws_sdk_dynamodb::Error> {
         self.client
             .describe_table()
             .table_name(USERS_TABLE_NAME)
@@ -94,6 +94,26 @@ impl DynamoClient {
         req.send().await?;
         Ok(true)
     }
+}
+
+pub async fn initialize_db() -> anyhow::Result<bool> {
+    let db = DynamoClient::init().await;
+
+    // TODO: There should be a better way instead of manually
+    //   calling them one by one.
+    db.check_create_table(USERS_TABLE_NAME).await?;
+    db.check_create_table(TELLS_TABLE_NAME).await?;
+
+    match db.ping().await {
+        Ok(_) => println!("Successfully connected to DynamoDB!"),
+        Err(e) => {
+            eprintln!("DynamoDB failed connection: {:?}", e);
+            return Err(e.into());
+        }
+    }
+
+    init_global_db(db); // Store the DynamoDB client in a global OnceLock
+    return Ok(true);
 }
 
 // Global database client instance (optional pattern for Lambda)
