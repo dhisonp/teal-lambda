@@ -114,7 +114,7 @@ pub(crate) async fn tell(
     let db = use_db();
     db.put(TELLS_TABLE_NAME, to_value(data)?)
         .await
-        .inspect_err(|e| println!("gemini.tell err:{}", e))?;
+        .inspect_err(|e| println!("gemini.tell err: {}", e))?;
 
     // TODO: Combine into one prompt
     // let summary = summarize_tell(&answer).await?;
