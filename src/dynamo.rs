@@ -20,7 +20,7 @@ pub fn init_global_db(client: DynamoClient) {
     DB_CLIENT.set(Arc::new(client)).ok();
 }
 
-pub fn get_global_db() -> &'static Arc<DynamoClient> {
+pub fn use_db() -> &'static Arc<DynamoClient> {
     DB_CLIENT.get().expect("Database not initialized")
 }
 
