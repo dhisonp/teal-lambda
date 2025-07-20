@@ -10,7 +10,8 @@ pub struct DynamoClient {
     client: Client,
 }
 
-const TABLE_NAME: &str = "teal-db";
+pub const USERS_TABLE_NAME: &str = "teal-users";
+// pub const TELLS_TABLE_NAME: &str = "teal-tells";
 pub const KEY: &str = "tealant_id";
 
 static DB_CLIENT: OnceLock<Arc<DynamoClient>> = OnceLock::new();
@@ -30,7 +31,7 @@ impl DynamoClient {
         Self { client }
     }
 
-    async fn create_table(&self) -> anyhow::Result<CreateTableOutput> {
+    async fn create_table(&self, table_name: &str) -> anyhow::Result<CreateTableOutput> {
         let ad = AttributeDefinition::builder()
             .attribute_name(KEY)
             .attribute_type(ScalarAttributeType::S)
@@ -44,50 +45,50 @@ impl DynamoClient {
         let res = self
             .client
             .create_table()
-            .table_name(TABLE_NAME)
+            .table_name(table_name)
             .key_schema(ks)
             .attribute_definitions(ad)
             .billing_mode(BillingMode::PayPerRequest)
             .send()
             .await?; // This will automatically convert the error to anyhow::Error
 
-        println!("Added table {} with key {}", TABLE_NAME, KEY);
+        println!("Added table {} with key {}", table_name, KEY);
         Ok(res)
     }
 
-    async fn check_table_exists(&self) -> ::anyhow::Result<bool> {
+    async fn check_table_exists(&self, table_name: &str) -> ::anyhow::Result<bool> {
         let paginator = self.client.list_tables().into_paginator().items().send();
         let table_names = paginator.collect::<Result<Vec<_>, _>>().await?;
-        Ok(table_names.iter().any(|name| name == TABLE_NAME))
+        Ok(table_names.iter().any(|name| name == table_name))
     }
 
     /// Check if table exists and creates if it doesn't.
-    pub async fn check_create_table(&self) -> anyhow::Result<bool> {
-        let exists = self.check_table_exists().await?;
+    pub async fn check_create_table(&self, table_name: &str) -> anyhow::Result<bool> {
+        let exists = self.check_table_exists(table_name).await?;
         if exists {
             return Ok(false);
         }
 
-        self.create_table().await?;
+        self.create_table(table_name).await?;
         Ok(true)
     }
 
     pub async fn ping(&self) -> Result<bool, Error> {
         self.client
             .describe_table()
-            .table_name(TABLE_NAME)
+            .table_name(USERS_TABLE_NAME)
             .send()
             .await?;
 
         Ok(true)
     }
 
-    pub async fn put(&self, item: serde_json::Value) -> anyhow::Result<bool> {
+    pub async fn put(&self, table_name: &str, item: serde_json::Value) -> anyhow::Result<bool> {
         let _item = to_item(item)?;
         let req = self
             .client
             .put_item()
-            .table_name(TABLE_NAME)
+            .table_name(table_name)
             .set_item(Some(_item));
 
         req.send().await?;

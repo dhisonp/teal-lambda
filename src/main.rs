@@ -7,6 +7,8 @@ mod users;
 
 use http_handler::function_handler;
 
+use crate::dynamo::USERS_TABLE_NAME;
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     tracing::init_default_subscriber();
@@ -15,7 +17,7 @@ async fn main() -> Result<(), Error> {
     dotenvy::dotenv()?;
 
     let db = dynamo::DynamoClient::init().await;
-    db.check_create_table().await?;
+    db.check_create_table(USERS_TABLE_NAME).await?;
     match db.ping().await {
         Ok(_) => println!("DynamoDB connected"),
         Err(e) => {

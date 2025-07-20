@@ -13,8 +13,10 @@ pub struct User {
     pub current_state: Option<String>,
 }
 
+const TABLE_NAME: &str = "teal_users";
+
 pub async fn create_user(data: &User) -> anyhow::Result<bool> {
     let db = dynamo::get_global_db();
     let user_json = serde_json::to_value(data)?;
-    db.put(user_json).await
+    db.put(TABLE_NAME, user_json).await
 }
