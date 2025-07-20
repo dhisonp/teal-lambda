@@ -1,5 +1,6 @@
+use crate::gemini::tell;
+use crate::schema::User;
 use crate::users::create_user;
-use crate::{gemini, schema::User};
 use lambda_http::{http, Body, Error, Request, RequestExt, Response};
 use serde::{Deserialize, Serialize};
 
@@ -66,8 +67,8 @@ async fn post_tell(event: Request) -> Result<Response<Body>, Error> {
 
         let username = event
             .query_string_parameters_ref()
-            .and_then(|p| p.first("name"))
-            .ok_or("name parameter is required")?
+            .and_then(|p| p.first("username"))
+            .ok_or("missing username query param")?
             .to_string();
 
         Ok((username, body))
@@ -89,7 +90,21 @@ async fn post_tell(event: Request) -> Result<Response<Body>, Error> {
         }
     };
 
-    let answer = gemini::tell(&username, &body.text, None).await?;
+    let answer = match tell(&username, &body.text, None).await {
+        Ok(data) => data,
+        Err(_) => {
+            // TODO: Refactor duplicate return error logic
+            let data = ResponseBody {
+                success: false,
+                error_message: Some("Oops! An error occurred when telling your story.".to_string()),
+            };
+            return Ok(Response::builder()
+                .status(http::StatusCode::UNPROCESSABLE_ENTITY)
+                .header("content-type", "application/json")
+                .body(serde_json::to_string(&data)?.into())
+                .map_err(Box::new)?);
+        }
+    };
 
     let data = ResponseBodyTell {
         base: ResponseBody {

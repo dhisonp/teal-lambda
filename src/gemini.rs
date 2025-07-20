@@ -1,5 +1,8 @@
+use crate::dynamo::{use_db, TELLS_TABLE_NAME};
 use crate::schema::{self, Context};
-use serde::Deserialize;
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
+use serde_json::to_value;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -22,6 +25,13 @@ struct Content {
 #[derive(Deserialize)]
 struct Part {
     pub text: String,
+}
+
+#[derive(Serialize)]
+struct TellItem {
+    pub username: String, // Should we use UIID instead of email/username here?
+    pub answer: String,
+    pub created_at: chrono::DateTime<Utc>,
 }
 
 /// Receives a prompt argument and returns a direct reply from Gemini.
@@ -94,7 +104,18 @@ pub(crate) async fn tell(
     let res = ask_gemini(&prompt).await?;
     let answer = res.to_string();
 
-    // TODO: Save these two into database
+    let data = TellItem {
+        username: username.to_string(),
+        answer: answer.clone(),
+        created_at: chrono::Utc::now(),
+    };
+
+    // TODO: Address "service error"
+    let db = use_db();
+    db.put(TELLS_TABLE_NAME, to_value(data)?)
+        .await
+        .inspect_err(|e| println!("gemini.tell err:{}", e))?;
+
     // TODO: Combine into one prompt
     // let summary = summarize_tell(&answer).await?;
     // let state = generate_state(None, Some(&summary)).await?;

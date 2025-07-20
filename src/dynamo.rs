@@ -11,7 +11,7 @@ pub struct DynamoClient {
 }
 
 pub const USERS_TABLE_NAME: &str = "teal-users";
-// pub const TELLS_TABLE_NAME: &str = "teal-tells";
+pub const TELLS_TABLE_NAME: &str = "teal-tells";
 pub const KEY: &str = "tealant_id";
 
 static DB_CLIENT: OnceLock<Arc<DynamoClient>> = OnceLock::new();
