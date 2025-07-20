@@ -3,21 +3,25 @@ use crate::{gemini, users::User};
 use lambda_http::{http, Body, Error, Request, RequestExt, Response};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
-struct RequestTellBody {
-    text: String,
-}
-
 #[derive(Serialize)]
-struct ResponseTellBody {
-    tell: Option<String>,
-    summary: Option<String>,
-    state: Option<String>,
+struct ResponseBody {
+    success: bool,
     error_message: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
-struct RequestPostUserCreate {
+struct RequestBodyTell {
+    text: String,
+}
+
+#[derive(Serialize)]
+struct ResponseBodyTell {
+    base: ResponseBody,
+    tell: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct RequestBodyPostUserCreate {
     name: String,
 }
 
@@ -34,11 +38,9 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
         (&http::Method::POST, "/tell") => post_tell(event).await,
         (&http::Method::POST, "/user/create") => post_user_create(event).await,
         _ => {
-            let data = ResponseTellBody {
-                tell: None,
-                error_message: Some("Route does not exist".to_string()),
-                state: None,
-                summary: None,
+            let data = ResponseBody {
+                success: false,
+                error_message: Some("Route not found".to_string()),
             };
             return Ok(Response::builder()
                 .status(http::StatusCode::NOT_FOUND)
@@ -50,12 +52,12 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
 }
 
 async fn post_tell(event: Request) -> Result<Response<Body>, Error> {
-    fn parse_request(event: &Request) -> Result<(String, RequestTellBody), String> {
+    fn parse_request(event: &Request) -> Result<(String, RequestBodyTell), String> {
         if event.body().is_empty() {
             return Err("Request body required".to_string());
         }
 
-        let body: RequestTellBody =
+        let body: RequestBodyTell =
             serde_json::from_slice(event.body()).map_err(|_| "Invalid JSON body")?;
         if body.text.trim().is_empty() {
             return Err("text cannot be an empty string".to_string());
@@ -74,11 +76,9 @@ async fn post_tell(event: Request) -> Result<Response<Body>, Error> {
         Ok(data) => data,
         Err(msg) => {
             // Is there a way to not include None keys?
-            let data = ResponseTellBody {
-                tell: None,
+            let data = ResponseBody {
+                success: false,
                 error_message: Some(msg),
-                state: None,
-                summary: None,
             };
             return Ok(Response::builder()
                 .status(http::StatusCode::UNPROCESSABLE_ENTITY)
@@ -88,16 +88,14 @@ async fn post_tell(event: Request) -> Result<Response<Body>, Error> {
         }
     };
 
-    // TODO: Delegate business logic elsewhere, not the controller
-    // TODO: Do everything in a single call instead of one each
     let answer = gemini::tell(&username, &body.text, None).await?;
-    let summary = gemini::summarize_tell(&answer).await?;
-    let state = gemini::generate_state(None, Some(&summary)).await?;
-    let data = ResponseTellBody {
+
+    let data = ResponseBodyTell {
+        base: ResponseBody {
+            success: true,
+            error_message: None,
+        },
         tell: Some(answer),
-        summary: Some(summary),
-        state: Some(state),
-        error_message: None,
     };
 
     let res = Response::builder()
@@ -117,7 +115,7 @@ async fn post_user_create(event: Request) -> Result<Response<Body>, Error> {
     // if path_param.map_or(true, |p| p.is_empty()) {
     //     return Err("Invalid path parameter".into());
     // }
-    let body: RequestPostUserCreate =
+    let body: RequestBodyPostUserCreate =
         serde_json::from_slice(event.body()).map_err(|_| "Invalid JSON body")?;
 
     let data = User {

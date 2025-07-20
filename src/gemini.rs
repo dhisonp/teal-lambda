@@ -92,7 +92,14 @@ pub(crate) async fn tell(
     );
 
     let res = ask_gemini(&prompt).await?;
-    Ok(res.to_string())
+    let answer = res.to_string();
+
+    // TODO: Save these two into database
+    // TODO: Combine into one prompt
+    // let summary = summarize_tell(&answer).await?;
+    // let state = generate_state(None, Some(&summary)).await?;
+
+    Ok(answer)
 }
 
 /// Generate a Context object to be passed into tell() from the database.
@@ -114,27 +121,27 @@ fn get_context() -> Context {
     }
 }
 
-/// Generate a summarized sentence of a generated Tell.
-pub(crate) async fn summarize_tell(tell: &str) -> anyhow::Result<String> {
-    let prompt = format!(
-        "Please summarize this to a single, concise single sentence: {}. This is for record keeping purposes, so write in third-person. Limit to concisely 12 words.",
-        &tell
-    );
-    let res = ask_gemini(&prompt).await?;
-    Ok(res)
-}
+// /// Generate a summarized sentence of a generated Tell.
+// pub(crate) async fn summarize_tell(tell: &str) -> anyhow::Result<String> {
+//     let prompt = format!(
+//         "Please summarize this to a single, concise single sentence: {}. This is for record keeping purposes, so write in third-person. Limit to concisely 12 words.",
+//         &tell
+//     );
+//     let res = ask_gemini(&prompt).await?;
+//     Ok(res)
+// }
 
-/// Evaluate the current state of the user based on existing or given context, optionally with the latest summary.
-pub(crate) async fn generate_state(
-    context: Option<Context>,
-    summary: Option<&str>,
-) -> anyhow::Result<String> {
-    let prompt = format!(
-        "Please summarize the user's current state of mind, based on the history: {}. Also account their latest conversation summary to you, if any: {}. This is for record keeping, so do not reference the user. Limit concisely to 12 words.",
-        context.unwrap_or(get_context()).to_string(),
-        summary.unwrap_or("None for now!"),
-    );
+// /// Evaluate the current state of the user based on existing or given context, optionally with the latest summary.
+// pub(crate) async fn generate_state(
+//     context: Option<Context>,
+//     summary: Option<&str>,
+// ) -> anyhow::Result<String> {
+//     let prompt = format!(
+//         "Please summarize the user's current state of mind, based on the history: {}. Also account their latest conversation summary to you, if any: {}. This is for record keeping, so do not reference the user. Limit concisely to 12 words.",
+//         context.unwrap_or(get_context()).to_string(),
+//         summary.unwrap_or("None for now!"),
+//     );
 
-    let res = ask_gemini(&prompt).await?;
-    Ok(res)
-}
+//     let res = ask_gemini(&prompt).await?;
+//     Ok(res)
+// }
