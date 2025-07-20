@@ -16,6 +16,7 @@ async fn main() -> Result<(), Error> {
     // TODO: Do not load .env in production
     dotenvy::dotenv()?;
 
+    // TODO: Refactor into db crate
     let db = dynamo::DynamoClient::init().await;
     db.check_create_table(USERS_TABLE_NAME).await?;
     match db.ping().await {
