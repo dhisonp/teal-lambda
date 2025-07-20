@@ -3,24 +3,24 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GeminiResponse {
+struct GeminiResponse {
     pub candidates: Option<Vec<Candidate>>,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Candidate {
+struct Candidate {
     pub content: Content,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Content {
+struct Content {
     pub parts: Vec<Part>,
 }
 
 #[derive(Deserialize)]
-pub struct Part {
+struct Part {
     pub text: String,
 }
 

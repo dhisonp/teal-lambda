@@ -1,5 +1,5 @@
 use crate::users::create_user;
-use crate::{gemini, users::User};
+use crate::{gemini, schema::User};
 use lambda_http::{http, Body, Error, Request, RequestExt, Response};
 use serde::{Deserialize, Serialize};
 
@@ -123,9 +123,6 @@ async fn post_user_create(event: Request) -> Result<Response<Body>, Error> {
         name: body.name,
         created_at: chrono::Utc::now().to_rfc3339(),
         current_mood: None,
-        current_state: None,
-        summary_history: None,
-        tell_history: None,
     };
 
     create_user(&data).await?;

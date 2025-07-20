@@ -1,6 +1,14 @@
 use serde::Serialize;
 use std::fmt;
 
+#[derive(Serialize)]
+pub struct User {
+    pub tealant_id: String,
+    pub name: String,
+    pub created_at: String,
+    pub current_mood: Option<Mood>,
+}
+
 #[derive(Debug, Serialize)]
 pub enum Mood {
     Contemplative,
