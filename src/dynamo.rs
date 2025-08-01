@@ -113,7 +113,7 @@ pub async fn initialize_db() -> anyhow::Result<bool> {
     }
 
     init_global_db(db); // Store the DynamoDB client in a global OnceLock
-    return Ok(true);
+    Ok(true)
 }
 
 // Global database client instance (optional pattern for Lambda)

@@ -113,7 +113,6 @@ pub(crate) async fn tell(
         created_at: chrono::Utc::now(),
     };
 
-    // TODO: Address "service error"
     let db = use_db();
     db.put(TELLS_TABLE_NAME, to_value(data)?).await?;
 
