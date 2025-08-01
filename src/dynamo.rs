@@ -63,7 +63,7 @@ impl DynamoClient {
     }
 
     /// Check if table exists and creates if it doesn't.
-    pub async fn check_create_table(&self, table_name: &str) -> anyhow::Result<bool> {
+    async fn check_create_table(&self, table_name: &str) -> anyhow::Result<bool> {
         let exists = self.check_table_exists(table_name).await?;
         if exists {
             return Ok(false);
@@ -73,7 +73,7 @@ impl DynamoClient {
         Ok(true)
     }
 
-    pub async fn ping(&self) -> Result<bool, aws_sdk_dynamodb::Error> {
+    async fn ping(&self) -> Result<bool, aws_sdk_dynamodb::Error> {
         self.client
             .describe_table()
             .table_name(USERS_TABLE_NAME)
@@ -99,7 +99,7 @@ impl DynamoClient {
 pub async fn initialize_db() -> anyhow::Result<bool> {
     let db = DynamoClient::init().await;
 
-    // TODO: There should be a better way instead of manually
+    // NOTE: There should be a better way instead of manually
     //   calling them one by one.
     db.check_create_table(USERS_TABLE_NAME).await?;
     db.check_create_table(TELLS_TABLE_NAME).await?;
