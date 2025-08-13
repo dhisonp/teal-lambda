@@ -124,24 +124,22 @@ pub(crate) async fn tell(
     );
 
     // TODO: Store/evaluate Mood
+    // TODO: Store summary history (new table)
     let result = ask_gemini(&prompt).await?;
-    let answer = result.answer;
-    let user_state = result.user_state;
-    let summary = result.summary; // Do we need this? Review as we collect data.
 
     let data = TellItem {
         tid: Uuid::new_v4().to_string(),
         username: username.to_string(),
-        answer: answer.clone(),
-        user_state: user_state.clone(),
+        answer: result.answer.clone(),
+        user_state: result.user_state.clone(),
         created_at: chrono::Utc::now(),
-        summary: Some(summary.clone()),
+        summary: Some(result.summary.clone()),
     };
 
     let db = use_db();
     db.put(TELLS_TABLE_NAME, to_value(data)?).await?;
 
-    Ok(answer)
+    Ok(result.answer)
 }
 
 /// Generate a Context object to be passed into tell() from the database.
