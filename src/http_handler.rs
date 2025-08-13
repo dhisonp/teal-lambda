@@ -53,6 +53,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     }
 }
 
+// TODO: Validate if user exists
 async fn post_tell(event: Request) -> Result<Response<Body>, Error> {
     fn parse_request(event: &Request) -> Result<(String, RequestBodyTell), String> {
         if event.body().is_empty() {
