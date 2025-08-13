@@ -123,6 +123,7 @@ pub(crate) async fn tell(
         tell,
     );
 
+    // TODO: Store/evaluate Mood
     let result = ask_gemini(&prompt).await?;
     let answer = result.answer;
     let user_state = result.user_state;
@@ -144,20 +145,25 @@ pub(crate) async fn tell(
 }
 
 /// Generate a Context object to be passed into tell() from the database.
+// TODO: Adjust to new tell structure and optimize storage.
 fn get_context() -> Context {
     Context {
-            mood: schema::Mood::Contemplative,
-            summary: "User is currently happy, albeit with some doubts on his career.".to_string(),
-            summary_history: vec![
-                "User was feeling overwhelmed about work-life balance".to_string(),
-                "User expressed excitement about a new project but worried about time management"
-                    .to_string(),
-                "User felt confident after completing a challenging task".to_string(),
-            ],
-            tell_history: vec![
-                "I think while growth come with doubt, I'm feeling happy and there will be some potential interviews I'll be going this week.".to_string(),
-                "You've successfully handled similar challenges before. A job will come to you if you truly believe in your own work.".to_string(),
-                "It's getting tough. I'm confident and I know I can deliver, but why am I not getting jobs? It's becoming tough, to be fair.".to_string(),
-            ],
+        mood: schema::Mood::Satisfied,
+        summary:
+            "User shares job search frustrations but has new potential opportunity through family."
+                .to_string(),
+        summary_history: vec![
+            "Hopeful, determined, but anxious about not messing up the opportunity.".to_string(),
+            "User was feeling overwhelmed about work-life balance".to_string(),
+            "User expressed excitement about a new project but worried about time management"
+                .to_string(),
+            "User felt confident after completing a challenging task".to_string(),
+        ],
+        tell_history: vec![
+            "Another day of no job. But my uncle just sent me a text that his company may be hiring new engineers, and it may be a senior role. This time, I have to be strong. There is no way I can fumble this up.".to_string(),
+            "I think while growth come with doubt, I'm feeling happy and there will be some potential interviews I'll be going this week.".to_string(),
+            "You've successfully handled similar challenges before. A job will come to you if you truly believe in your own work.".to_string(),
+            "It's getting tough. I'm confident and I know I can deliver, but why am I not getting jobs? It's becoming tough, to be fair.".to_string(),
+        ],
     }
 }

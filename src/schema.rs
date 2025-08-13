@@ -13,7 +13,8 @@ pub struct User {
 
 #[derive(Debug, Serialize)]
 pub enum Mood {
-    Contemplative,
+    // Contemplative,
+    Satisfied,
     // TODO: Add more along the way
 }
 
