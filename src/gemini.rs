@@ -28,16 +28,28 @@ struct Part {
     pub text: String,
 }
 
+#[derive(Deserialize)]
+struct CombinedGeminiResponse {
+    pub answer: String,
+    pub summary: String,
+    pub user_state: String,
+}
+
+// TODO: Check if this is better to be defined in schema.rs
 #[derive(Serialize)]
 struct TellItem {
     pub tid: String,
     pub username: String, // Should we use UIID instead of email/username here?
     pub answer: String,
+    pub user_state: String,
     pub created_at: chrono::DateTime<Utc>,
+    pub summary: Option<String>,
 }
 
 /// Receives a prompt argument and returns a direct reply from Gemini.
-async fn ask_gemini(prompt: &str) -> anyhow::Result<String> {
+// NOTE: Recently modified to return a CombinedGeminiResponse instance. Rename as the purpose
+// of the function has changed.
+async fn ask_gemini(prompt: &str) -> anyhow::Result<CombinedGeminiResponse> {
     let url = format!(
         "{}?key={}",
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
@@ -68,24 +80,31 @@ async fn ask_gemini(prompt: &str) -> anyhow::Result<String> {
     });
 
     let client = reqwest::Client::new();
-    let res = client
-        .post(&url)
-        .json(&data)
-        .send()
-        .await?
-        .error_for_status()?;
+    let res = client.post(&url).json(&data).send().await?;
     let body: GeminiResponse = res.json().await?;
 
-    let text = body
+    let mut text = body
         .candidates
         .as_ref()
         .and_then(|c| c.first())
         .and_then(|c| c.content.parts.first())
         .map(|p| p.text.as_str())
-        .unwrap_or("Gemini is not in a mood today")
+        .unwrap_or(
+            r#"{
+            "answer": "Gemini is not in a mood today",
+            "summary": "No summary",
+            "user_state": "No state"
+        }"#,
+        )
         .to_string();
 
-    Ok(text)
+    // Strip Markdown code block delimiters to ensure successful JSON parsing
+    if text.starts_with("```json\n") && text.ends_with("\n```") {
+        text = text.strip_prefix("```json\n").unwrap_or(&text).to_string();
+        text = text.strip_suffix("\n```").unwrap_or(&text).to_string();
+    }
+
+    Ok(serde_json::from_str(&text)?)
 }
 
 /// Tells Teal what the user is feeling, and Teal will return with a very benevolent response– like the color teal!
@@ -97,28 +116,29 @@ pub(crate) async fn tell(
 ) -> anyhow::Result<String> {
     let context = context.unwrap_or_else(|| get_context());
     let prompt = format!(
-        "My name is {}. Here is a context of my past conversations with you: {} (if I sent you no context, then this is our first conversation!). However, I have something to tell you about. {}. What do you think?",
+        "My name is {}. Here is a context of my past conversations with you: {} (if I sent you no context, then this is our first conversation!). However, I have something to tell you about. {}.\n\nPlease provide your benevolent response to my tell, a concise third-person summary of my tell (max 12 words), and a concise summary of my current state of mind based on our conversation history and my latest tell (max 12 words).\n\nFormat your response as a JSON object with the following keys:\n- `answer`: Your benevolent response.\n- `summary`: A concise third-person summary of my tell, limited to 12 words.\n- `user_state`: A concise summary of my current state of mind, limited to 12 words.\n\nExample JSON format:\n```json\n{{\n  \"answer\": \"Your benevolent response here.\",\n  \"summary\": \"User expressed feelings about X.\",\n  \"user_state\": \"User is feeling Y.\"\n}}
+```\nRemember to speak assertively, yet encouragingly and soft-spoken, like a therapist. Do not ask questions, and be concise and decisive with your answers.",
         username,
         context.to_string(),
         tell,
     );
 
-    let res = ask_gemini(&prompt).await?;
-    let answer = res.to_string();
+    let result = ask_gemini(&prompt).await?;
+    let answer = result.answer;
+    let user_state = result.user_state;
+    let summary = result.summary; // Do we need this? Review as we collect data.
 
     let data = TellItem {
         tid: Uuid::new_v4().to_string(),
         username: username.to_string(),
         answer: answer.clone(),
+        user_state: user_state.clone(),
         created_at: chrono::Utc::now(),
+        summary: Some(summary.clone()),
     };
 
     let db = use_db();
     db.put(TELLS_TABLE_NAME, to_value(data)?).await?;
-
-    // TODO: Combine into one prompt
-    // let summary = summarize_tell(&answer).await?;
-    // let state = generate_state(None, Some(&summary)).await?;
 
     Ok(answer)
 }
@@ -141,28 +161,3 @@ fn get_context() -> Context {
             ],
     }
 }
-
-// /// Generate a summarized sentence of a generated Tell.
-// pub(crate) async fn summarize_tell(tell: &str) -> anyhow::Result<String> {
-//     let prompt = format!(
-//         "Please summarize this to a single, concise single sentence: {}. This is for record keeping purposes, so write in third-person. Limit to concisely 12 words.",
-//         &tell
-//     );
-//     let res = ask_gemini(&prompt).await?;
-//     Ok(res)
-// }
-
-// /// Evaluate the current state of the user based on existing or given context, optionally with the latest summary.
-// pub(crate) async fn generate_state(
-//     context: Option<Context>,
-//     summary: Option<&str>,
-// ) -> anyhow::Result<String> {
-//     let prompt = format!(
-//         "Please summarize the user's current state of mind, based on the history: {}. Also account their latest conversation summary to you, if any: {}. This is for record keeping, so do not reference the user. Limit concisely to 12 words.",
-//         context.unwrap_or(get_context()).to_string(),
-//         summary.unwrap_or("None for now!"),
-//     );
-
-//     let res = ask_gemini(&prompt).await?;
-//     Ok(res)
-// }
