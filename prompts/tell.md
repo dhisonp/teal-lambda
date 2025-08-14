@@ -15,6 +15,8 @@ Format your response as a JSON object with the following keys:
 - `summary`: A concise third-person summary of my tell, limited to 12 words.
 - `user_state`: A concise summary of my current state of mind, limited to 12
   words.
+- `mood`: One, single word defining the mood of the user based on answer and
+  `user_state`.
 
 ### Example JSON format:
 
@@ -22,7 +24,8 @@ Format your response as a JSON object with the following keys:
 {
   "answer": "Your benevolent response here.",
   "summary": "User expressed feelings about X.",
-  "user_state": "User is feeling Y."
+  "user_state": "User is feeling Y.",
+  "mood": "Fulfilled"
 }
 ```
 

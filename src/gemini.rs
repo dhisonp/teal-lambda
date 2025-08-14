@@ -1,6 +1,6 @@
 use crate::dynamo::{use_db, TELLS_TABLE_NAME};
 use crate::prompts;
-use crate::schema::{Context};
+use crate::schema::Context;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::to_value;
@@ -37,13 +37,15 @@ struct CombinedGeminiResponse {
     pub mood: String,
 }
 
-// TODO: Check if this is better to be defined in schema.rs
+// NOTE: This should perhaps be defined in dynamo.rs since it's a database schema.
+// TODO: Check if this is better to be defined in schema.rs.
 #[derive(Serialize)]
 struct TellItem {
     pub tid: String,
     pub username: String, // Should we use UIID instead of email/username here?
     pub answer: String,
     pub user_state: String,
+    pub mood: String,
     pub created_at: chrono::DateTime<Utc>,
     pub summary: Option<String>,
 }
@@ -91,13 +93,7 @@ async fn ask_gemini(prompt: &str) -> anyhow::Result<CombinedGeminiResponse> {
         .and_then(|c| c.first())
         .and_then(|c| c.content.parts.first())
         .map(|p| p.text.as_str())
-        .unwrap_or(
-            r#"{
-            "answer": "Gemini is not in a mood today",
-            "summary": "No summary",
-            "user_state": "No state"
-        }"#,
-        )
+        .unwrap_or("Gemini is not in a mood today!")
         .to_string();
 
     // Strip Markdown code block delimiters to ensure successful JSON parsing
@@ -109,8 +105,9 @@ async fn ask_gemini(prompt: &str) -> anyhow::Result<CombinedGeminiResponse> {
     Ok(serde_json::from_str(&text)?)
 }
 
-/// Tells Teal what the user is feeling, and Teal will return with a very benevolent response– like the color teal!
-/// Optionally takes `context` for now, but this shouldn't be needed in most cases.
+/// Tells Teal what the user is feeling, and Teal will return with a very benevolent response–
+/// like the color teal! Optionally takes `context` for now, but this shouldn't be needed in most
+/// cases.
 pub(crate) async fn tell(
     username: &str,
     tell: &str,
@@ -124,7 +121,6 @@ pub(crate) async fn tell(
     });
     let prompt = prompts::get_templated_prompt(prompts::PromptName::Tell, prompt_data)?;
 
-    // TODO: Store/evaluate Mood
     // TODO: Store summary history (new table)
     let result = ask_gemini(&prompt).await?;
 
@@ -133,6 +129,7 @@ pub(crate) async fn tell(
         username: username.to_string(),
         answer: result.answer.clone(),
         user_state: result.user_state.clone(),
+        mood: result.mood.clone(),
         created_at: chrono::Utc::now(),
         summary: Some(result.summary.clone()),
     };
