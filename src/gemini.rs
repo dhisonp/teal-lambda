@@ -1,6 +1,6 @@
 use crate::dynamo::{use_db, TELLS_TABLE_NAME};
 use crate::prompts;
-use crate::schema::{self, Context};
+use crate::schema::{Context};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::to_value;
@@ -34,6 +34,7 @@ struct CombinedGeminiResponse {
     pub answer: String,
     pub summary: String,
     pub user_state: String,
+    pub mood: String,
 }
 
 // TODO: Check if this is better to be defined in schema.rs
@@ -146,7 +147,7 @@ pub(crate) async fn tell(
 // TODO: Adjust to new tell structure and optimize storage.
 fn get_context() -> Context {
     Context {
-        mood: schema::Mood::Satisfied,
+        mood: "satisfied".to_string(),
         summary:
             "User shares job search frustrations but has new potential opportunity through family."
                 .to_string(),

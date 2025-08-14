@@ -11,21 +11,8 @@ pub struct User {
     pub created_at: String, // TODO: Use chrono::DateTime<Utc>
 }
 
-#[derive(Debug, Serialize)]
-pub enum Mood {
-    // Contemplative,
-    Satisfied,
-    // TODO: Add more along the way
-}
-
-impl fmt::Display for Mood {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
 pub struct Context {
-    pub mood: Mood,                   // TODO: Define set of moods
+    pub mood: String,                 // TODO: Define set of moods
     pub summary: String,              // A summary of the user's current state of mind
     pub summary_history: Vec<String>, // History of past summaries
     pub tell_history: Vec<String>,    // History of past Tells
