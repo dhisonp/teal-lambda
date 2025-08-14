@@ -96,6 +96,7 @@ impl DynamoClient {
         Ok(true)
     }
 
+    // TODO: Refactor tell-related functions into tells.rs, including save_tell()
     pub async fn get_tells_by_username(&self, username: &str) -> anyhow::Result<Vec<TellItem>> {
         let scan_output = self
             .client
@@ -110,6 +111,7 @@ impl DynamoClient {
             .send()
             .await?;
 
+        // TODO: Sort by created_at
         let mut tells = Vec::new();
         if let Some(items) = scan_output.items {
             for item in items {
