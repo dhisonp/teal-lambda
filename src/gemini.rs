@@ -37,11 +37,11 @@ struct GeminiTellResponse {
     pub mood: String,
 }
 
-// NOTE: This should perhaps be defined in dynamo.rs since it's a database schema.
-// TODO: Check if this is better to be defined in schema.rs.
+// TODO: Check if this is better to be defined in another module.
 #[derive(Serialize)]
 struct TellItem {
     pub tid: String,
+    pub username: String, // Current user identifier. Should we replace with something else?
     pub tell: String,
     pub answer: String,
     pub user_state: String,
@@ -125,6 +125,7 @@ pub(crate) async fn tell(
 
     let data = TellItem {
         tid: Uuid::new_v4().to_string(),
+        username: username.to_string(),
         tell: tell.to_string(),
         answer: response.answer.clone(),
         user_state: response.user_state.clone(),
