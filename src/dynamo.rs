@@ -3,7 +3,8 @@ use aws_sdk_dynamodb::{
     types::{AttributeDefinition, BillingMode, KeySchemaElement, KeyType, ScalarAttributeType},
     Client,
 };
-use serde_dynamo::to_item;
+use serde_dynamo::{from_item, to_item};
+use serde_json::Value;
 use std::sync::{Arc, OnceLock};
 
 pub struct DynamoClient {
@@ -93,6 +94,31 @@ impl DynamoClient {
 
         req.send().await?;
         Ok(true)
+    }
+
+    pub async fn get_tells_by_username(&self, username: &str) -> anyhow::Result<Vec<Value>> {
+        let scan_output = self
+            .client
+            .scan()
+            .table_name(TELLS_TABLE_NAME)
+            .filter_expression("#un = :username_val")
+            .expression_attribute_names("#un", "username")
+            .expression_attribute_values(
+                ":username_val",
+                aws_sdk_dynamodb::types::AttributeValue::S(username.to_string()),
+            )
+            .send()
+            .await?;
+
+        let mut tells = Vec::new();
+        if let Some(items) = scan_output.items {
+            for item in items {
+                let tell_value: Value = from_item(item)?;
+                tells.push(tell_value);
+            }
+        }
+
+        Ok(tells)
     }
 }
 

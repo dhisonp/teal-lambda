@@ -1,3 +1,4 @@
+use crate::dynamo::use_db;
 use crate::gemini::tell;
 use crate::schema::User;
 use crate::users::create_user;
@@ -21,6 +22,12 @@ struct ResponseBodyTell {
     tell: Option<String>,
 }
 
+#[derive(Serialize)]
+struct ResponseBodyTells {
+    base: ResponseBody,
+    tells: Option<Vec<serde_json::Value>>,
+}
+
 #[derive(Serialize, Deserialize)]
 struct RequestBodyPostUserCreate {
     name: String,
@@ -39,6 +46,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     match (method, path) {
         (&http::Method::POST, "/tell") => post_tell(event).await,
         (&http::Method::POST, "/user/create") => post_user_create(event).await,
+        (&http::Method::GET, "/tells") => get_tells_by_username_handler(event).await,
         _ => {
             let data = ResponseBody {
                 success: false,
@@ -51,6 +59,57 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
                 .map_err(Box::new)?);
         }
     }
+}
+
+async fn get_tells_by_username_handler(event: Request) -> Result<Response<Body>, Error> {
+    let username = match event
+        .query_string_parameters_ref()
+        .and_then(|p| p.first("username"))
+    {
+        Some(u) => u.to_string(),
+        None => {
+            let data = ResponseBody {
+                success: false,
+                error_message: Some("missing username query param".to_string()),
+            };
+            return Ok(Response::builder()
+                .status(http::StatusCode::UNPROCESSABLE_ENTITY)
+                .header("content-type", "application/json")
+                .body(serde_json::to_string(&data)?.into())
+                .map_err(Box::new)?);
+        }
+    };
+
+    let tells = match use_db().get_tells_by_username(&username).await {
+        Ok(t) => t,
+        Err(e) => {
+            let data = ResponseBody {
+                success: false,
+                error_message: Some(format!("Failed to retrieve tells: {}", e)),
+            };
+            return Ok(Response::builder()
+                .status(http::StatusCode::INTERNAL_SERVER_ERROR) // Use 500 for DB errors
+                .header("content-type", "application/json")
+                .body(serde_json::to_string(&data)?.into())
+                .map_err(Box::new)?);
+        }
+    };
+
+    let data = ResponseBodyTells {
+        base: ResponseBody {
+            success: true,
+            error_message: None,
+        },
+        tells: Some(tells),
+    };
+
+    let res = Response::builder()
+        .status(http::StatusCode::OK)
+        .header("content-type", "application/json")
+        .body(serde_json::to_string(&data)?.into())
+        .map_err(Box::new)?;
+
+    Ok(res)
 }
 
 // TODO: Validate if user exists
