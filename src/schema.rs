@@ -7,7 +7,7 @@ pub struct User {
     pub tid: String,
     pub name: String,
     pub email: String,
-    pub current_mood: Option<Mood>,
+    pub current_mood: Option<String>,
     pub created_at: String, // TODO: Use chrono::DateTime<Utc>
 }
 
