@@ -46,7 +46,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     match (method, path) {
         (&http::Method::POST, "/tell") => post_tell(event).await,
         (&http::Method::POST, "/user/create") => post_user_create(event).await,
-        (&http::Method::GET, "/tells") => get_tells_by_username_handler(event).await,
+        (&http::Method::GET, "/tells") => get_tells_by_user(event).await,
         _ => {
             let data = ResponseBody {
                 success: false,
@@ -61,7 +61,7 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     }
 }
 
-async fn get_tells_by_username_handler(event: Request) -> Result<Response<Body>, Error> {
+async fn get_tells_by_user(event: Request) -> Result<Response<Body>, Error> {
     let username = match event
         .query_string_parameters_ref()
         .and_then(|p| p.first("username"))
