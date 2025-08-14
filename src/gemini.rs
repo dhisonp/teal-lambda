@@ -38,8 +38,8 @@ struct GeminiTellResponse {
 }
 
 // TODO: Check if this is better to be defined in another module.
-#[derive(Serialize)]
-struct TellItem {
+#[derive(Serialize, Deserialize)]
+pub struct TellItem {
     pub tid: String,
     pub username: String, // Current user identifier. Should we replace with something else?
     pub tell: String,
@@ -113,10 +113,15 @@ pub(crate) async fn tell(
     tell: &str,
     context: Option<Context>,
 ) -> anyhow::Result<String> {
-    let context = context.unwrap_or_else(|| get_context()).to_string();
+    let context = if let Some(ctx) = context {
+        ctx
+    } else {
+        get_context(username).await
+    };
+    let context_string = context.to_string();
     let prompt_data = prompts::PromptData::Tell(prompts::TellReplacements {
         username,
-        context: &context,
+        context: &context_string,
         tell,
     });
     let prompt = prompts::get_templated_prompt(prompts::PromptName::Tell, prompt_data)?;
@@ -142,7 +147,16 @@ pub(crate) async fn tell(
 
 /// Generate a Context object to be passed into tell() from the database.
 // TODO: Adjust to new tell structure and optimize storage.
-fn get_context() -> Context {
+// NOTE: Should we return a Result?
+async fn get_context(username: &str) -> Context {
+    let tells = use_db()
+        .get_tells_by_username(username)
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Error fetching tells for context: {}", e);
+            Vec::new()
+        });
+
     Context {
         mood: "satisfied".to_string(),
         summary:

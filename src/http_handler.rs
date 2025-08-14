@@ -1,5 +1,6 @@
 use crate::dynamo::use_db;
 use crate::gemini::tell;
+use crate::gemini::TellItem;
 use crate::schema::User;
 use crate::users::create_user;
 use lambda_http::{http, Body, Error, Request, RequestExt, Response};
@@ -25,7 +26,7 @@ struct ResponseBodyTell {
 #[derive(Serialize)]
 struct ResponseBodyTells {
     base: ResponseBody,
-    tells: Option<Vec<serde_json::Value>>,
+    tells: Option<Vec<TellItem>>,
 }
 
 #[derive(Serialize, Deserialize)]
