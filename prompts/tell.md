@@ -1,11 +1,33 @@
-My name is {username}. Here is a context of my past conversations with you:
-{context} (if I sent you no context, then this is our first conversation!).
+My name is {username}. Here is a history of my past conversations with you in
+JSON:
 
-However, I have something to tell you about... {tell}.
+```json
+{context}
+```
+
+To better understand the context:
+
+- You can ignore the fields `tid` and `username`.
+- `created_at` is when I feel this way and told you how I feel, alongside with
+  the summaries and moods you have evaluated in the past.
+- `tell` is the exact words I spoke to you at the time.
+- `user_state` is your evaluation on how I felt at the time I told you my
+  feelings.
+- `mood` is the one word you chose to describe my mood at that time.
+- `summary` is a short note to for your own use to quickly refer back how I was
+  at the time.
+
+If I sent you no context, then this is our first conversation!.
+
+However, I have something **new** to tell you about... {tell}.
 
 Please provide your benevolent response to my tell, a concise third-person
 summary of my tell (max 12 words), and a concise summary of my current state of
-mind based on our conversation history and my latest tell (max 12 words).
+mind based on:
+
+1. Our conversation history (a.k.a. context)
+2. My latest tell
+3. My latest Mood
 
 ## Response Format
 

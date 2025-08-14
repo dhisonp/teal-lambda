@@ -38,8 +38,8 @@ struct GeminiTellResponse {
 }
 
 // TODO: Check if this is better to be defined in another module.
-#[derive(Serialize)]
-struct TellItem {
+#[derive(Serialize, Deserialize)]
+pub struct TellItem {
     pub tid: String,
     pub username: String, // Current user identifier. Should we replace with something else?
     pub tell: String,
@@ -113,10 +113,21 @@ pub(crate) async fn tell(
     tell: &str,
     context: Option<Context>,
 ) -> anyhow::Result<String> {
-    let context = context.unwrap_or_else(|| get_context()).to_string();
+    // TODO: These are vibe coded. Review and refine.
+    let context = if let Some(ctx) = context {
+        ctx
+    } else {
+        get_context(username).await
+    };
+    let context_string = context
+        .tells
+        .iter()
+        .map(|item| item.tell.clone())
+        .collect::<Vec<String>>()
+        .join("\n");
     let prompt_data = prompts::PromptData::Tell(prompts::TellReplacements {
         username,
-        context: &context,
+        context: &context_string,
         tell,
     });
     let prompt = prompts::get_templated_prompt(prompts::PromptName::Tell, prompt_data)?;
@@ -141,25 +152,16 @@ pub(crate) async fn tell(
 }
 
 /// Generate a Context object to be passed into tell() from the database.
-// TODO: Adjust to new tell structure and optimize storage.
-fn get_context() -> Context {
-    Context {
-        mood: "satisfied".to_string(),
-        summary:
-            "User shares job search frustrations but has new potential opportunity through family."
-                .to_string(),
-        summary_history: vec![
-            "Hopeful, determined, but anxious about not messing up the opportunity.".to_string(),
-            "User was feeling overwhelmed about work-life balance".to_string(),
-            "User expressed excitement about a new project but worried about time management"
-                .to_string(),
-            "User felt confident after completing a challenging task".to_string(),
-        ],
-        tell_history: vec![
-            "Another day of no job. But my uncle just sent me a text that his company may be hiring new engineers, and it may be a senior role. This time, I have to be strong. There is no way I can fumble this up.".to_string(),
-            "I think while growth come with doubt, I'm feeling happy and there will be some potential interviews I'll be going this week.".to_string(),
-            "You've successfully handled similar challenges before. A job will come to you if you truly believe in your own work.".to_string(),
-            "It's getting tough. I'm confident and I know I can deliver, but why am I not getting jobs? It's becoming tough, to be fair.".to_string(),
-        ],
-    }
+// NOTE: Should we return a Result?
+async fn get_context(username: &str) -> Context {
+    let tells = use_db()
+        .get_tells_by_username(username)
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Error fetching tells for context: {}", e);
+            Vec::new()
+        });
+
+    // TODO: Construct a proper context for better LLM understanding
+    Context { tells }
 }

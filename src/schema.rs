@@ -1,5 +1,6 @@
 use serde::Serialize;
-use std::fmt;
+
+use crate::gemini::TellItem;
 
 // TODO: Storing OAuth2.0 credentials
 #[derive(Serialize)]
@@ -11,20 +12,7 @@ pub struct User {
     pub created_at: String, // TODO: Use chrono::DateTime<Utc>
 }
 
+// TODO: A better structure for better LLM understanding
 pub struct Context {
-    pub mood: String,                 // TODO: Define set of moods
-    pub summary: String,              // A summary of the user's current state of mind
-    pub summary_history: Vec<String>, // History of past summaries
-    pub tell_history: Vec<String>,    // History of past Tells
-}
-
-impl fmt::Display for Context {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "My current mood: {}. My current situation: {}. My past situations: {}. My past tells to you: {}.",
-        self.mood.to_string(),
-        self.summary,
-        self.summary_history.join(", "),
-        self.tell_history.join(", "),
-        )
-    }
+    pub tells: Vec<TellItem>,
 }
