@@ -4,7 +4,6 @@ use crate::schema::{self, Context};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::to_value;
-use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -117,13 +116,12 @@ pub(crate) async fn tell(
     context: Option<Context>,
 ) -> anyhow::Result<String> {
     let context = context.unwrap_or_else(|| get_context()).to_string();
-    let replacements: HashMap<&str, &str> = HashMap::from([
-        ("username", username),
-        ("context", &context),
-        ("tell", tell),
-    ]);
-
-    let prompt = prompts::get_templated_prompt(prompts::PromptName::Tell, &replacements)?;
+    let prompt_data = prompts::PromptData::Tell(prompts::TellReplacements {
+        username,
+        context: &context,
+        tell,
+    });
+    let prompt = prompts::get_templated_prompt(prompts::PromptName::Tell, prompt_data)?;
 
     // TODO: Store/evaluate Mood
     // TODO: Store summary history (new table)
