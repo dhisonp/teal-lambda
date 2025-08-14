@@ -42,7 +42,7 @@ struct GeminiTellResponse {
 #[derive(Serialize)]
 struct TellItem {
     pub tid: String,
-    pub username: String, // Should we use UIID instead of email/username here?
+    pub tell: String,
     pub answer: String,
     pub user_state: String,
     pub mood: String,
@@ -121,12 +121,11 @@ pub(crate) async fn tell(
     });
     let prompt = prompts::get_templated_prompt(prompts::PromptName::Tell, prompt_data)?;
 
-    // TODO: Store summary history
     let response = get_tell_response(&prompt).await?;
 
     let data = TellItem {
         tid: Uuid::new_v4().to_string(),
-        username: username.to_string(),
+        tell: tell.to_string(),
         answer: response.answer.clone(),
         user_state: response.user_state.clone(),
         mood: response.mood.clone(),
