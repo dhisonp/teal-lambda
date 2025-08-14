@@ -30,7 +30,7 @@ struct Part {
 }
 
 #[derive(Deserialize)]
-struct CombinedGeminiResponse {
+struct GeminiTellResponse {
     pub answer: String,
     pub summary: String,
     pub user_state: String,
@@ -53,7 +53,7 @@ struct TellItem {
 /// Receives a prompt argument and returns a direct reply from Gemini.
 // NOTE: Recently modified to return a CombinedGeminiResponse instance. Rename as the purpose
 // of the function has changed.
-async fn ask_gemini(prompt: &str) -> anyhow::Result<CombinedGeminiResponse> {
+async fn get_tell_response(prompt: &str) -> anyhow::Result<GeminiTellResponse> {
     let url = format!(
         "{}?key={}",
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
@@ -121,23 +121,23 @@ pub(crate) async fn tell(
     });
     let prompt = prompts::get_templated_prompt(prompts::PromptName::Tell, prompt_data)?;
 
-    // TODO: Store summary history (new table)
-    let result = ask_gemini(&prompt).await?;
+    // TODO: Store summary history
+    let response = get_tell_response(&prompt).await?;
 
     let data = TellItem {
         tid: Uuid::new_v4().to_string(),
         username: username.to_string(),
-        answer: result.answer.clone(),
-        user_state: result.user_state.clone(),
-        mood: result.mood.clone(),
+        answer: response.answer.clone(),
+        user_state: response.user_state.clone(),
+        mood: response.mood.clone(),
         created_at: chrono::Utc::now(),
-        summary: Some(result.summary.clone()),
+        summary: Some(response.summary.clone()),
     };
 
     let db = use_db();
     db.put(TELLS_TABLE_NAME, to_value(data)?).await?;
 
-    Ok(result.answer)
+    Ok(response.answer)
 }
 
 /// Generate a Context object to be passed into tell() from the database.
