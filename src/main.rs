@@ -1,6 +1,7 @@
 mod dynamo;
 mod gemini;
 mod http_handler;
+mod prompts;
 mod schema;
 mod users;
 

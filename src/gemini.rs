@@ -1,8 +1,10 @@
 use crate::dynamo::{use_db, TELLS_TABLE_NAME};
+use crate::prompts;
 use crate::schema::{self, Context};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::to_value;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -114,14 +116,14 @@ pub(crate) async fn tell(
     tell: &str,
     context: Option<Context>,
 ) -> anyhow::Result<String> {
-    let context = context.unwrap_or_else(|| get_context());
-    let prompt = format!(
-        "My name is {}. Here is a context of my past conversations with you: {} (if I sent you no context, then this is our first conversation!). However, I have something to tell you about. {}.\n\nPlease provide your benevolent response to my tell, a concise third-person summary of my tell (max 12 words), and a concise summary of my current state of mind based on our conversation history and my latest tell (max 12 words).\n\nFormat your response as a JSON object with the following keys:\n- `answer`: Your benevolent response.\n- `summary`: A concise third-person summary of my tell, limited to 12 words.\n- `user_state`: A concise summary of my current state of mind, limited to 12 words.\n\nExample JSON format:\n```json\n{{\n  \"answer\": \"Your benevolent response here.\",\n  \"summary\": \"User expressed feelings about X.\",\n  \"user_state\": \"User is feeling Y.\"\n}}
-```\nRemember to speak assertively, yet encouragingly and soft-spoken, like a therapist. Do not ask questions, and be concise and decisive with your answers.",
-        username,
-        context.to_string(),
-        tell,
-    );
+    let context = context.unwrap_or_else(|| get_context()).to_string();
+    let replacements: HashMap<&str, &str> = HashMap::from([
+        ("username", username),
+        ("context", &context),
+        ("tell", tell),
+    ]);
+
+    let prompt = prompts::get_templated_prompt(prompts::PromptName::Tell, &replacements)?;
 
     // TODO: Store/evaluate Mood
     // TODO: Store summary history (new table)
