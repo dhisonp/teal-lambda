@@ -1,6 +1,5 @@
+use core::fmt;
 use serde::Serialize;
-
-use crate::gemini::TellItem;
 
 // TODO: Storing OAuth2.0 credentials
 #[derive(Serialize)]
