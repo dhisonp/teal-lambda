@@ -6,7 +6,7 @@ use crate::users::create_user;
 use lambda_http::{http, Body, Error, Request, RequestExt, Response};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct ResponseBody {
     success: bool,
     error_message: Option<String>,
@@ -218,45 +218,137 @@ async fn post_user_create(event: Request) -> Result<Response<Body>, Error> {
     Ok(res)
 }
 
-// TODO: Do not forget to update tests upon MVP
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lambda_http::{Request, RequestExt};
-    use std::collections::HashMap;
+    use lambda_http::{http::Method, Body, Request};
 
     #[tokio::test]
-    async fn test_generic_http_handler() {
+    async fn test_route_not_found() {
         let request = Request::default();
-
         let response = function_handler(request).await.unwrap();
-        assert_eq!(response.status(), 200);
+        
+        assert_eq!(response.status(), 404);
+        let body: ResponseBody = serde_json::from_slice(response.body()).unwrap();
+        assert!(!body.success);
+        assert_eq!(body.error_message, Some("Route not found".to_string()));
+    }
 
-        let body_bytes = response.body().to_vec();
-        let body_string = String::from_utf8(body_bytes).unwrap();
-
-        assert_eq!(
-            body_string,
-            "Hello world, this is an AWS Lambda HTTP request"
-        );
+    fn create_test_request(method: Method, path: &str, body: Body) -> Request {
+        let mut req = Request::new(body);
+        *req.method_mut() = method;
+        *req.uri_mut() = path.parse().unwrap();
+        req
     }
 
     #[tokio::test]
-    async fn test_http_handler_with_query_string() {
-        let mut query_string_parameters: HashMap<String, String> = HashMap::new();
-        query_string_parameters.insert("name".into(), "teal-lambda".into());
-
-        let request = Request::default().with_query_string_parameters(query_string_parameters);
+    async fn test_post_tell_missing_body() {
+        let request = create_test_request(Method::POST, "/tell?username=testuser", Body::Empty);
 
         let response = function_handler(request).await.unwrap();
-        assert_eq!(response.status(), 200);
+        assert_eq!(response.status(), 422);
+        
+        let body: ResponseBody = serde_json::from_slice(response.body()).unwrap();
+        assert!(!body.success);
+        assert_eq!(body.error_message, Some("Request body required".to_string()));
+    }
 
-        let body_bytes = response.body().to_vec();
-        let body_string = String::from_utf8(body_bytes).unwrap();
-
-        assert_eq!(
-            body_string,
-            "Hello teal-lambda, this is an AWS Lambda HTTP request"
+    #[tokio::test]
+    async fn test_post_tell_invalid_json() {
+        let request = create_test_request(
+            Method::POST, 
+            "/tell?username=testuser", 
+            Body::Text("invalid json".to_string())
         );
+
+        let response = function_handler(request).await.unwrap();
+        assert_eq!(response.status(), 422);
+        
+        let body: ResponseBody = serde_json::from_slice(response.body()).unwrap();
+        assert!(!body.success);
+        assert_eq!(body.error_message, Some("Invalid JSON body".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_post_tell_empty_text() {
+        let request_body = RequestBodyTell {
+            text: "".to_string(),
+        };
+        let json = serde_json::to_string(&request_body).unwrap();
+        
+        let request = create_test_request(
+            Method::POST,
+            "/tell?username=testuser",
+            Body::Text(json)
+        );
+
+        let response = function_handler(request).await.unwrap();
+        assert_eq!(response.status(), 422);
+        
+        let body: ResponseBody = serde_json::from_slice(response.body()).unwrap();
+        assert!(!body.success);
+        assert_eq!(body.error_message, Some("text cannot be an empty string".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_post_tell_missing_username() {
+        let request_body = RequestBodyTell {
+            text: "I'm feeling great!".to_string(),
+        };
+        let json = serde_json::to_string(&request_body).unwrap();
+        
+        let request = create_test_request(Method::POST, "/tell", Body::Text(json));
+
+        let response = function_handler(request).await.unwrap();
+        assert_eq!(response.status(), 422);
+        
+        let body: ResponseBody = serde_json::from_slice(response.body()).unwrap();
+        assert!(!body.success);
+        assert_eq!(body.error_message, Some("missing username query param".to_string()));
+    }
+
+    #[test]
+    fn test_request_body_tell_serialization() {
+        let body = RequestBodyTell {
+            text: "Hello world".to_string(),
+        };
+        let json = serde_json::to_string(&body).unwrap();
+        assert!(json.contains("Hello world"));
+        
+        let parsed: RequestBodyTell = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.text, "Hello world");
+    }
+
+    #[test]
+    fn test_request_body_user_create_serialization() {
+        let body = RequestBodyPostUserCreate {
+            name: "Jane Doe".to_string(),
+            email: "jane@example.com".to_string(),
+        };
+        let json = serde_json::to_string(&body).unwrap();
+        assert!(json.contains("Jane Doe"));
+        assert!(json.contains("jane@example.com"));
+        
+        let parsed: RequestBodyPostUserCreate = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.name, "Jane Doe");
+        assert_eq!(parsed.email, "jane@example.com");
+    }
+
+    #[test]
+    fn test_response_body_serialization() {
+        let body = ResponseBody {
+            success: true,
+            error_message: None,
+        };
+        let json = serde_json::to_string(&body).unwrap();
+        assert!(json.contains("true"));
+        
+        let body_with_error = ResponseBody {
+            success: false,
+            error_message: Some("Error occurred".to_string()),
+        };
+        let json = serde_json::to_string(&body_with_error).unwrap();
+        assert!(json.contains("false"));
+        assert!(json.contains("Error occurred"));
     }
 }

@@ -49,3 +49,70 @@ pub fn get_templated_prompt(prompt_name: PromptName, data: PromptData) -> anyhow
     }
     Ok(prompt)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_prompt_name_as_str() {
+        assert_eq!(PromptName::Tell.as_str(), "tell.md");
+    }
+
+    #[test]
+    fn test_get_templated_prompt_tell() {
+        let tell_data = TellReplacements {
+            username: "testuser",
+            context: "User was feeling happy yesterday",
+            tell: "I had a great day today!",
+        };
+        let data = PromptData::Tell(tell_data);
+        
+        let result = get_templated_prompt(PromptName::Tell, data);
+        assert!(result.is_ok());
+        
+        let prompt = result.unwrap();
+        assert!(prompt.contains("testuser"));
+        assert!(prompt.contains("User was feeling happy yesterday"));
+        assert!(prompt.contains("I had a great day today!"));
+        assert!(!prompt.contains("{username}"));
+        assert!(!prompt.contains("{context}"));
+        assert!(!prompt.contains("{tell}"));
+    }
+
+    #[test]
+    fn test_get_templated_prompt_empty_values() {
+        let tell_data = TellReplacements {
+            username: "",
+            context: "",
+            tell: "",
+        };
+        let data = PromptData::Tell(tell_data);
+        
+        let result = get_templated_prompt(PromptName::Tell, data);
+        assert!(result.is_ok());
+        
+        let prompt = result.unwrap();
+        assert!(!prompt.contains("{username}"));
+        assert!(!prompt.contains("{context}"));
+        assert!(!prompt.contains("{tell}"));
+    }
+
+    #[test]
+    fn test_get_templated_prompt_with_special_characters() {
+        let tell_data = TellReplacements {
+            username: "user@test.com",
+            context: "User said: \"I'm feeling great!\"",
+            tell: "Today I achieved 100% on my test & I'm happy!",
+        };
+        let data = PromptData::Tell(tell_data);
+        
+        let result = get_templated_prompt(PromptName::Tell, data);
+        assert!(result.is_ok());
+        
+        let prompt = result.unwrap();
+        assert!(prompt.contains("user@test.com"));
+        assert!(prompt.contains("User said: \"I'm feeling great!\""));
+        assert!(prompt.contains("Today I achieved 100% on my test & I'm happy!"));
+    }
+}
