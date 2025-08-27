@@ -21,7 +21,7 @@ pub struct Context {
 impl fmt::Display for Context {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "My current mood: {}. My current situation: {}. My past situations: {}. My past tells to you: {}.",
-        self.mood.to_string(),
+        self.mood,
         self.summary,
         self.summary_history.join(", "),
         self.tell_history.join(", "),
@@ -69,8 +69,14 @@ mod tests {
         let context = Context {
             mood: "excited".to_string(),
             summary: "User got a new job".to_string(),
-            summary_history: vec!["Was looking for work".to_string(), "Had interviews".to_string()],
-            tell_history: vec!["I'm job hunting".to_string(), "Interview went well".to_string()],
+            summary_history: vec![
+                "Was looking for work".to_string(),
+                "Had interviews".to_string(),
+            ],
+            tell_history: vec![
+                "I'm job hunting".to_string(),
+                "Interview went well".to_string(),
+            ],
         };
 
         let display = format!("{}", context);
