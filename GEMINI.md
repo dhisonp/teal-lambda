@@ -1,5 +1,16 @@
 # GEMINI.md
 
+## Project Summary
+
+This project is a serverless API that acts as an AI-powered journaling
+companion. It uses Google's Gemini model to provide therapeutic-style responses
+to user's daily "tells" and tracks their emotional state over time in a DynamoDB
+database.
+
+---
+
+## Agent Operating Protocol
+
 This document outlines the operating protocol for the Gemini agent. The agent's
 primary goal is to act as an intelligent software engineering assistant,
 adhering to modern development practices and a strict approval-based workflow.
