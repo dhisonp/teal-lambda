@@ -8,10 +8,10 @@ use std::fmt;
 use uuid::Uuid;
 
 pub struct Context {
-    pub mood: String,                 // TODO: Define set of moods
-    pub summary: String,              // A summary of the user's current state of mind
-    pub summary_history: Vec<String>, // History of past summaries
-    pub tell_history: Vec<String>,    // History of past Tells
+    pub mood: String,
+    pub summary: String,
+    pub summary_history: Vec<String>,
+    pub tell_history: Vec<String>,
 }
 
 impl fmt::Display for Context {
@@ -25,7 +25,6 @@ impl fmt::Display for Context {
     }
 }
 
-// TODO: Check if this is better to be defined in another module.
 #[derive(Serialize)]
 pub struct TellItem {
     pub tid: String,
@@ -42,7 +41,7 @@ pub struct TellItem {
 /// like the color teal! Optionally takes `context` for now, but this shouldn't be needed in most
 /// cases.
 pub async fn tell(username: &str, tell: &str, context: Option<Context>) -> anyhow::Result<String> {
-    let context = context.unwrap_or_else(|| get_context()).to_string();
+    let context = context.unwrap_or_else(get_context).to_string();
     let prompt_data = prompts::PromptData::Tell(prompts::TellReplacements {
         username,
         context: &context,
