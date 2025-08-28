@@ -25,7 +25,7 @@ pub enum PromptData<'a> {
     Tell(TellReplacements<'a>),
 }
 
-pub fn get_templated_prompt(prompt_name: PromptName, data: PromptData) -> anyhow::Result<String> {
+pub fn create_prompt(prompt_name: PromptName, data: PromptData) -> anyhow::Result<String> {
     let filename = prompt_name.as_str();
     let template = PROMPTS_DIR
         .get_file(filename)
@@ -68,7 +68,7 @@ mod tests {
         };
         let data = PromptData::Tell(tell_data);
 
-        let result = get_templated_prompt(PromptName::Tell, data);
+        let result = create_prompt(PromptName::Tell, data);
         assert!(result.is_ok());
 
         let prompt = result.unwrap();
@@ -89,7 +89,7 @@ mod tests {
         };
         let data = PromptData::Tell(tell_data);
 
-        let result = get_templated_prompt(PromptName::Tell, data);
+        let result = create_prompt(PromptName::Tell, data);
         assert!(result.is_ok());
 
         let prompt = result.unwrap();
@@ -107,7 +107,7 @@ mod tests {
         };
         let data = PromptData::Tell(tell_data);
 
-        let result = get_templated_prompt(PromptName::Tell, data);
+        let result = create_prompt(PromptName::Tell, data);
         assert!(result.is_ok());
 
         let prompt = result.unwrap();

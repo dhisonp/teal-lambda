@@ -32,7 +32,7 @@ pub struct GeminiTellResponse {
 }
 
 /// Receives a prompt argument and returns a direct reply from Gemini.
-pub async fn get_tell_response(prompt: &str) -> anyhow::Result<GeminiTellResponse> {
+pub async fn ask_gemini(prompt: &str) -> anyhow::Result<GeminiTellResponse> {
     let url = format!(
         "{}?key={}",
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",

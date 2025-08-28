@@ -1,5 +1,5 @@
 use crate::dynamo::{use_db, TELLS_TABLE_NAME};
-use crate::gemini::get_tell_response;
+use crate::gemini::{ask_gemini, GeminiTellResponse};
 use crate::prompts;
 use chrono::Utc;
 use serde::Serialize;
@@ -40,32 +40,45 @@ pub struct TellItem {
 /// Tells Teal what the user is feeling, and Teal will return with a very benevolent response–
 /// like the color teal! Optionally takes `context` for now, but this shouldn't be needed in most
 /// cases.
-pub async fn tell(username: &str, tell: &str, context: Option<Context>) -> anyhow::Result<String> {
-    let context = context.unwrap_or_else(get_context).to_string();
+pub async fn tell(
+    username: &str,
+    user_message: &str,
+    context: Option<Context>,
+) -> anyhow::Result<String> {
+    let context_string = context.unwrap_or_else(get_context).to_string();
     let prompt_data = prompts::PromptData::Tell(prompts::TellReplacements {
         username,
-        context: &context,
-        tell,
+        context: &context_string,
+        tell: user_message,
     });
-    let prompt = prompts::get_templated_prompt(prompts::PromptName::Tell, prompt_data)?;
 
-    let response = get_tell_response(&prompt).await?;
+    let prompt = prompts::create_prompt(prompts::PromptName::Tell, prompt_data)?;
+    let response = ask_gemini(&prompt).await?;
 
-    let data = TellItem {
-        tid: Uuid::new_v4().to_string(),
-        username: username.to_string(),
-        tell: tell.to_string(),
-        answer: response.answer.clone(),
-        user_state: response.user_state.clone(),
-        mood: response.mood.clone(),
-        created_at: chrono::Utc::now(),
-        summary: Some(response.summary.clone()),
-    };
-
+    let tell_record = build_tell_record(username, user_message, &response);
     let db = use_db();
-    db.put(TELLS_TABLE_NAME, to_value(data)?).await?;
+    db.put(TELLS_TABLE_NAME, to_value(tell_record)?).await?;
 
     Ok(response.answer)
+}
+
+/// Creates a TellItem from user input and AI response data. This is a pure function that can be
+/// easily unit tested.
+pub fn build_tell_record(
+    username: &str,
+    user_message: &str,
+    ai_response: &GeminiTellResponse,
+) -> TellItem {
+    TellItem {
+        tid: Uuid::new_v4().to_string(),
+        username: username.to_string(),
+        tell: user_message.to_string(),
+        answer: ai_response.answer.clone(),
+        user_state: ai_response.user_state.clone(),
+        mood: ai_response.mood.clone(),
+        created_at: Utc::now(),
+        summary: Some(ai_response.summary.clone()),
+    }
 }
 
 /// Generate a Context object to be passed into tell() from the database.
@@ -160,5 +173,63 @@ mod tests {
         assert!(display.contains("Previous summary"));
         assert!(display.contains("My single tell"));
         assert!(!display.contains(", "));
+    }
+
+    #[test]
+    fn test_build_tell_record() {
+        use crate::gemini::GeminiTellResponse;
+
+        let ai_response = GeminiTellResponse {
+            answer: "That sounds like an exciting opportunity!".to_string(),
+            summary: "User got job interview".to_string(),
+            user_state: "hopeful and nervous".to_string(),
+            mood: "excited".to_string(),
+        };
+
+        let tell_item =
+            build_tell_record("testuser", "I have an interview tomorrow!", &ai_response);
+
+        assert_eq!(tell_item.username, "testuser");
+        assert_eq!(tell_item.tell, "I have an interview tomorrow!");
+        assert_eq!(
+            tell_item.answer,
+            "That sounds like an exciting opportunity!"
+        );
+        assert_eq!(tell_item.user_state, "hopeful and nervous");
+        assert_eq!(tell_item.mood, "excited");
+        assert_eq!(
+            tell_item.summary,
+            Some("User got job interview".to_string())
+        );
+
+        // Verify UUID format (should be valid UUID string)
+        assert!(!tell_item.tid.is_empty());
+        assert!(tell_item.tid.contains('-'));
+
+        // Verify timestamp is recent (within last minute)
+        let now = chrono::Utc::now();
+        let diff = now.signed_duration_since(tell_item.created_at);
+        assert!(diff.num_seconds() < 60);
+    }
+
+    #[test]
+    fn test_build_tell_record_with_empty_values() {
+        use crate::gemini::GeminiTellResponse;
+
+        let ai_response = GeminiTellResponse {
+            answer: "".to_string(),
+            summary: "".to_string(),
+            user_state: "".to_string(),
+            mood: "".to_string(),
+        };
+
+        let tell_item = build_tell_record("", "", &ai_response);
+
+        assert_eq!(tell_item.username, "");
+        assert_eq!(tell_item.tell, "");
+        assert_eq!(tell_item.answer, "");
+        assert_eq!(tell_item.user_state, "");
+        assert_eq!(tell_item.mood, "");
+        assert_eq!(tell_item.summary, Some("".to_string()));
     }
 }
