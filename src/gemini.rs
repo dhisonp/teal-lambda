@@ -163,3 +163,78 @@ fn get_context() -> Context {
         ],
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_gemini_tell_response_deserialization() {
+        let json_data = json!({
+            "answer": "That sounds challenging, but you're handling it well.",
+            "summary": "User facing work challenges",
+            "user_state": "determined but stressed",
+            "mood": "anxious"
+        });
+
+        let response: GeminiTellResponse = serde_json::from_value(json_data).unwrap();
+        assert_eq!(response.answer, "That sounds challenging, but you're handling it well.");
+        assert_eq!(response.summary, "User facing work challenges");
+        assert_eq!(response.user_state, "determined but stressed");
+        assert_eq!(response.mood, "anxious");
+    }
+
+    #[test]
+    fn test_markdown_code_block_stripping() {
+        let mut text = "```json\n{\"answer\": \"test\"}\n```".to_string();
+        
+        if text.starts_with("```json\n") && text.ends_with("\n```") {
+            text = text.strip_prefix("```json\n").unwrap_or(&text).to_string();
+            text = text.strip_suffix("\n```").unwrap_or(&text).to_string();
+        }
+
+        assert_eq!(text, "{\"answer\": \"test\"}");
+    }
+
+    #[test]
+    fn test_complex_gemini_response_extraction() {
+        let json_data = json!({
+            "candidates": [
+                {
+                    "content": {
+                        "parts": [
+                            {
+                                "text": "```json\n{\"answer\":\"Hello\",\"summary\":\"Test\",\"user_state\":\"good\",\"mood\":\"happy\"}\n```"
+                            }
+                        ]
+                    }
+                }
+            ]
+        });
+
+        let response: GeminiResponse = serde_json::from_value(json_data).unwrap();
+        let mut extracted_text = response
+            .candidates
+            .as_ref()
+            .and_then(|c| c.first())
+            .and_then(|c| c.content.parts.first())
+            .map(|p| p.text.as_str())
+            .unwrap_or("Gemini is not in a mood today!")
+            .to_string();
+
+        if extracted_text.starts_with("```json\n") && extracted_text.ends_with("\n```") {
+            extracted_text = extracted_text.strip_prefix("```json\n").unwrap_or(&extracted_text).to_string();
+            extracted_text = extracted_text.strip_suffix("\n```").unwrap_or(&extracted_text).to_string();
+        }
+
+        let tell_response: Result<GeminiTellResponse, _> = serde_json::from_str(&extracted_text);
+        assert!(tell_response.is_ok());
+        
+        let tell_response = tell_response.unwrap();
+        assert_eq!(tell_response.answer, "Hello");
+        assert_eq!(tell_response.summary, "Test");
+        assert_eq!(tell_response.user_state, "good");
+        assert_eq!(tell_response.mood, "happy");
+    }
+}
