@@ -2,7 +2,7 @@ use crate::dynamo::{use_db, TELLS_TABLE_NAME};
 use crate::gemini::{ask_gemini, GeminiTellResponse};
 use crate::prompts;
 use chrono::Utc;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::to_value;
 use std::fmt;
 use uuid::Uuid;
@@ -25,7 +25,7 @@ impl fmt::Display for Context {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct TellItem {
     pub tid: String,
     pub username: String, // Current user identifier. Should we replace with something else?
@@ -79,6 +79,18 @@ pub fn build_tell_record(
         created_at: Utc::now(),
         summary: Some(ai_response.summary.clone()),
     }
+}
+
+/// Retrieves all tells for a specific user, sorted by creation date (newest first).
+/// This provides the business logic layer between HTTP handlers and database operations.
+pub async fn get_user_tells(username: &str) -> anyhow::Result<Vec<TellItem>> {
+    let db = use_db();
+    let mut tells: Vec<TellItem> = db.scan(TELLS_TABLE_NAME, "username", username).await?;
+
+    // Sort by creation date, newest first (business logic)
+    tells.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+
+    Ok(tells)
 }
 
 /// Generate a Context object to be passed into tell() from the database.

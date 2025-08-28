@@ -1,4 +1,4 @@
-use crate::tell::tell;
+use crate::tell::{get_user_tells, tell, TellItem};
 use crate::users::{create_user, User};
 use lambda_http::{http, Body, Error, Request, RequestExt, Response};
 use serde::{Deserialize, Serialize};
@@ -20,6 +20,12 @@ struct ResponseBodyTell {
     tell: Option<String>,
 }
 
+#[derive(Serialize)]
+struct ResponseBodyTells {
+    base: ResponseBody,
+    tells: Option<Vec<TellItem>>,
+}
+
 #[derive(Serialize, Deserialize)]
 struct RequestBodyPostUserCreate {
     name: String,
@@ -38,16 +44,17 @@ pub(crate) async fn function_handler(event: Request) -> Result<Response<Body>, E
     match (method, path) {
         (&http::Method::POST, "/tell") => post_tell(event).await,
         (&http::Method::POST, "/user/create") => post_user_create(event).await,
+        (&http::Method::GET, "/tells") => get_tells_by_user(event).await,
         _ => {
             let data = ResponseBody {
                 success: false,
                 error_message: Some("Route not found".to_string()),
             };
-            return Ok(Response::builder()
+            Ok(Response::builder()
                 .status(http::StatusCode::NOT_FOUND)
                 .header("content-type", "application/json")
                 .body(serde_json::to_string(&data)?.into())
-                .map_err(Box::new)?);
+                .map_err(Box::new)?)
         }
     }
 }
@@ -150,6 +157,57 @@ async fn post_user_create(event: Request) -> Result<Response<Body>, Error> {
     // TODO: Correct response format
     let res = Response::builder()
         .status(http::StatusCode::CREATED)
+        .header("content-type", "application/json")
+        .body(serde_json::to_string(&data)?.into())
+        .map_err(Box::new)?;
+
+    Ok(res)
+}
+
+async fn get_tells_by_user(event: Request) -> Result<Response<Body>, Error> {
+    let username = match event
+        .query_string_parameters_ref()
+        .and_then(|p| p.first("username"))
+    {
+        Some(u) => u.to_string(),
+        None => {
+            let data = ResponseBody {
+                success: false,
+                error_message: Some("missing username query param".to_string()),
+            };
+            return Ok(Response::builder()
+                .status(http::StatusCode::UNPROCESSABLE_ENTITY)
+                .header("content-type", "application/json")
+                .body(serde_json::to_string(&data)?.into())
+                .map_err(Box::new)?);
+        }
+    };
+
+    let tells = match get_user_tells(&username).await {
+        Ok(t) => t,
+        Err(e) => {
+            let data = ResponseBody {
+                success: false,
+                error_message: Some(format!("Failed to retrieve tells: {}", e)),
+            };
+            return Ok(Response::builder()
+                .status(http::StatusCode::INTERNAL_SERVER_ERROR)
+                .header("content-type", "application/json")
+                .body(serde_json::to_string(&data)?.into())
+                .map_err(Box::new)?);
+        }
+    };
+
+    let data = ResponseBodyTells {
+        base: ResponseBody {
+            success: true,
+            error_message: None,
+        },
+        tells: Some(tells),
+    };
+
+    let res = Response::builder()
+        .status(http::StatusCode::OK)
         .header("content-type", "application/json")
         .body(serde_json::to_string(&data)?.into())
         .map_err(Box::new)?;
