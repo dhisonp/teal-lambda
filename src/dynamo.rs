@@ -1,9 +1,13 @@
 use aws_sdk_dynamodb::{
     operation::create_table::CreateTableOutput,
-    types::{AttributeDefinition, BillingMode, KeySchemaElement, KeyType, ScalarAttributeType},
+    types::{
+        AttributeDefinition, AttributeValue, BillingMode, KeySchemaElement, KeyType,
+        ScalarAttributeType,
+    },
     Client,
 };
-use serde_dynamo::to_item;
+use serde::de::DeserializeOwned;
+use serde_dynamo::{from_item, to_item};
 use std::sync::{Arc, OnceLock};
 
 pub struct DynamoClient {
@@ -94,6 +98,31 @@ impl DynamoClient {
         req.send().await?;
         Ok(true)
     }
+
+    pub async fn scan<T>(&self, table_name: &str, key: &str, value: &str) -> anyhow::Result<Vec<T>>
+    where
+        T: DeserializeOwned,
+    {
+        let result = self
+            .client
+            .scan()
+            .table_name(table_name)
+            .filter_expression("#attr = :attr_val")
+            .expression_attribute_names("#attr", key)
+            .expression_attribute_values(":attr_val", AttributeValue::S(value.to_string()))
+            .send()
+            .await?;
+
+        let mut items = Vec::new();
+        if let Some(result_items) = result.items {
+            for item in result_items {
+                let deserialized_item: T = from_item(item)?;
+                items.push(deserialized_item);
+            }
+        }
+
+        Ok(items)
+    }
 }
 
 pub async fn initialize_db() -> anyhow::Result<bool> {
@@ -115,6 +144,3 @@ pub async fn initialize_db() -> anyhow::Result<bool> {
     init_global_db(db); // Store the DynamoDB client in a global OnceLock
     Ok(true)
 }
-
-// Global database client instance (optional pattern for Lambda)
-// pub type SharedDatabaseClient = Arc<DynamoClient>;
