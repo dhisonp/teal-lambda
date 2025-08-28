@@ -1,4 +1,4 @@
-use crate::gemini::tell;
+use crate::tell::tell;
 use crate::schema::User;
 use crate::users::create_user;
 use lambda_http::{http, Body, Error, Request, RequestExt, Response};

@@ -3,6 +3,7 @@ mod gemini;
 mod http_handler;
 mod prompts;
 mod schema;
+mod tell;
 mod users;
 
 use crate::dynamo::initialize_db;
