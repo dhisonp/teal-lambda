@@ -1,6 +1,5 @@
 use crate::tell::tell;
-use crate::schema::User;
-use crate::users::create_user;
+use crate::users::{create_user, User};
 use lambda_http::{http, Body, Error, Request, RequestExt, Response};
 use serde::{Deserialize, Serialize};
 
@@ -167,7 +166,7 @@ mod tests {
     async fn test_route_not_found() {
         let request = Request::default();
         let response = function_handler(request).await.unwrap();
-        
+
         assert_eq!(response.status(), 404);
         let body: ResponseBody = serde_json::from_slice(response.body()).unwrap();
         assert!(!body.success);
@@ -187,23 +186,26 @@ mod tests {
 
         let response = function_handler(request).await.unwrap();
         assert_eq!(response.status(), 422);
-        
+
         let body: ResponseBody = serde_json::from_slice(response.body()).unwrap();
         assert!(!body.success);
-        assert_eq!(body.error_message, Some("Request body required".to_string()));
+        assert_eq!(
+            body.error_message,
+            Some("Request body required".to_string())
+        );
     }
 
     #[tokio::test]
     async fn test_post_tell_invalid_json() {
         let request = create_test_request(
-            Method::POST, 
-            "/tell?username=testuser", 
-            Body::Text("invalid json".to_string())
+            Method::POST,
+            "/tell?username=testuser",
+            Body::Text("invalid json".to_string()),
         );
 
         let response = function_handler(request).await.unwrap();
         assert_eq!(response.status(), 422);
-        
+
         let body: ResponseBody = serde_json::from_slice(response.body()).unwrap();
         assert!(!body.success);
         assert_eq!(body.error_message, Some("Invalid JSON body".to_string()));
@@ -215,19 +217,19 @@ mod tests {
             text: "".to_string(),
         };
         let json = serde_json::to_string(&request_body).unwrap();
-        
-        let request = create_test_request(
-            Method::POST,
-            "/tell?username=testuser",
-            Body::Text(json)
-        );
+
+        let request =
+            create_test_request(Method::POST, "/tell?username=testuser", Body::Text(json));
 
         let response = function_handler(request).await.unwrap();
         assert_eq!(response.status(), 422);
-        
+
         let body: ResponseBody = serde_json::from_slice(response.body()).unwrap();
         assert!(!body.success);
-        assert_eq!(body.error_message, Some("text cannot be an empty string".to_string()));
+        assert_eq!(
+            body.error_message,
+            Some("text cannot be an empty string".to_string())
+        );
     }
 
     #[tokio::test]
@@ -236,15 +238,18 @@ mod tests {
             text: "I'm feeling great!".to_string(),
         };
         let json = serde_json::to_string(&request_body).unwrap();
-        
+
         let request = create_test_request(Method::POST, "/tell", Body::Text(json));
 
         let response = function_handler(request).await.unwrap();
         assert_eq!(response.status(), 422);
-        
+
         let body: ResponseBody = serde_json::from_slice(response.body()).unwrap();
         assert!(!body.success);
-        assert_eq!(body.error_message, Some("missing username query param".to_string()));
+        assert_eq!(
+            body.error_message,
+            Some("missing username query param".to_string())
+        );
     }
 
     #[test]
@@ -254,7 +259,7 @@ mod tests {
         };
         let json = serde_json::to_string(&body).unwrap();
         assert!(json.contains("Hello world"));
-        
+
         let parsed: RequestBodyTell = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.text, "Hello world");
     }
@@ -268,7 +273,7 @@ mod tests {
         let json = serde_json::to_string(&body).unwrap();
         assert!(json.contains("Jane Doe"));
         assert!(json.contains("jane@example.com"));
-        
+
         let parsed: RequestBodyPostUserCreate = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.name, "Jane Doe");
         assert_eq!(parsed.email, "jane@example.com");
@@ -282,7 +287,7 @@ mod tests {
         };
         let json = serde_json::to_string(&body).unwrap();
         assert!(json.contains("true"));
-        
+
         let body_with_error = ResponseBody {
             success: false,
             error_message: Some("Error occurred".to_string()),

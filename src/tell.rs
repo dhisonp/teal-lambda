@@ -1,11 +1,29 @@
 use crate::dynamo::{use_db, TELLS_TABLE_NAME};
 use crate::gemini::get_tell_response;
 use crate::prompts;
-use crate::schema::Context;
 use chrono::Utc;
 use serde::Serialize;
 use serde_json::to_value;
+use std::fmt;
 use uuid::Uuid;
+
+pub struct Context {
+    pub mood: String,                 // TODO: Define set of moods
+    pub summary: String,              // A summary of the user's current state of mind
+    pub summary_history: Vec<String>, // History of past summaries
+    pub tell_history: Vec<String>,    // History of past Tells
+}
+
+impl fmt::Display for Context {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "My current mood: {}. My current situation: {}. My past situations: {}. My past tells to you: {}.",
+        self.mood,
+        self.summary,
+        self.summary_history.join(", "),
+        self.tell_history.join(", "),
+        )
+    }
+}
 
 // TODO: Check if this is better to be defined in another module.
 #[derive(Serialize)]
@@ -90,5 +108,58 @@ mod tests {
 
         assert!(context.summary_history[0].contains("Hopeful, determined"));
         assert!(context.tell_history[0].contains("Another day of no job"));
+    }
+
+    #[test]
+    fn test_context_display() {
+        let context = Context {
+            mood: "excited".to_string(),
+            summary: "User got a new job".to_string(),
+            summary_history: vec![
+                "Was looking for work".to_string(),
+                "Had interviews".to_string(),
+            ],
+            tell_history: vec![
+                "I'm job hunting".to_string(),
+                "Interview went well".to_string(),
+            ],
+        };
+
+        let display = format!("{}", context);
+        assert!(display.contains("My current mood: excited"));
+        assert!(display.contains("My current situation: User got a new job"));
+        assert!(display.contains("Was looking for work, Had interviews"));
+        assert!(display.contains("I'm job hunting, Interview went well"));
+    }
+
+    #[test]
+    fn test_context_display_empty_histories() {
+        let context = Context {
+            mood: "calm".to_string(),
+            summary: "First conversation".to_string(),
+            summary_history: vec![],
+            tell_history: vec![],
+        };
+
+        let display = format!("{}", context);
+        assert!(display.contains("My current mood: calm"));
+        assert!(display.contains("My current situation: First conversation"));
+        assert!(display.contains("My past situations: "));
+        assert!(display.contains("My past tells to you: "));
+    }
+
+    #[test]
+    fn test_context_display_single_items() {
+        let context = Context {
+            mood: "hopeful".to_string(),
+            summary: "User shared good news".to_string(),
+            summary_history: vec!["Previous summary".to_string()],
+            tell_history: vec!["My single tell".to_string()],
+        };
+
+        let display = format!("{}", context);
+        assert!(display.contains("Previous summary"));
+        assert!(display.contains("My single tell"));
+        assert!(!display.contains(", "));
     }
 }

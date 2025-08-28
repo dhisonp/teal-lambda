@@ -99,7 +99,10 @@ mod tests {
         });
 
         let response: GeminiTellResponse = serde_json::from_value(json_data).unwrap();
-        assert_eq!(response.answer, "That sounds challenging, but you're handling it well.");
+        assert_eq!(
+            response.answer,
+            "That sounds challenging, but you're handling it well."
+        );
         assert_eq!(response.summary, "User facing work challenges");
         assert_eq!(response.user_state, "determined but stressed");
         assert_eq!(response.mood, "anxious");
@@ -108,7 +111,7 @@ mod tests {
     #[test]
     fn test_markdown_code_block_stripping() {
         let mut text = "```json\n{\"answer\": \"test\"}\n```".to_string();
-        
+
         if text.starts_with("```json\n") && text.ends_with("\n```") {
             text = text.strip_prefix("```json\n").unwrap_or(&text).to_string();
             text = text.strip_suffix("\n```").unwrap_or(&text).to_string();
@@ -144,13 +147,19 @@ mod tests {
             .to_string();
 
         if extracted_text.starts_with("```json\n") && extracted_text.ends_with("\n```") {
-            extracted_text = extracted_text.strip_prefix("```json\n").unwrap_or(&extracted_text).to_string();
-            extracted_text = extracted_text.strip_suffix("\n```").unwrap_or(&extracted_text).to_string();
+            extracted_text = extracted_text
+                .strip_prefix("```json\n")
+                .unwrap_or(&extracted_text)
+                .to_string();
+            extracted_text = extracted_text
+                .strip_suffix("\n```")
+                .unwrap_or(&extracted_text)
+                .to_string();
         }
 
         let tell_response: Result<GeminiTellResponse, _> = serde_json::from_str(&extracted_text);
         assert!(tell_response.is_ok());
-        
+
         let tell_response = tell_response.unwrap();
         assert_eq!(tell_response.answer, "Hello");
         assert_eq!(tell_response.summary, "Test");

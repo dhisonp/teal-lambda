@@ -67,10 +67,10 @@ mod tests {
             tell: "I had a great day today!",
         };
         let data = PromptData::Tell(tell_data);
-        
+
         let result = get_templated_prompt(PromptName::Tell, data);
         assert!(result.is_ok());
-        
+
         let prompt = result.unwrap();
         assert!(prompt.contains("testuser"));
         assert!(prompt.contains("User was feeling happy yesterday"));
@@ -88,10 +88,10 @@ mod tests {
             tell: "",
         };
         let data = PromptData::Tell(tell_data);
-        
+
         let result = get_templated_prompt(PromptName::Tell, data);
         assert!(result.is_ok());
-        
+
         let prompt = result.unwrap();
         assert!(!prompt.contains("{username}"));
         assert!(!prompt.contains("{context}"));
@@ -106,10 +106,10 @@ mod tests {
             tell: "Today I achieved 100% on my test & I'm happy!",
         };
         let data = PromptData::Tell(tell_data);
-        
+
         let result = get_templated_prompt(PromptName::Tell, data);
         assert!(result.is_ok());
-        
+
         let prompt = result.unwrap();
         assert!(prompt.contains("user@test.com"));
         assert!(prompt.contains("User said: \"I'm feeling great!\""));
