@@ -23,11 +23,7 @@ pub struct TellItem {
 /// Tells Teal what the user is feeling, and Teal will return with a very benevolent response–
 /// like the color teal! Optionally takes `context` for now, but this shouldn't be needed in most
 /// cases.
-pub async fn tell(
-    username: &str,
-    tell: &str,
-    context: Option<Context>,
-) -> anyhow::Result<String> {
+pub async fn tell(username: &str, tell: &str, context: Option<Context>) -> anyhow::Result<String> {
     let context = context.unwrap_or_else(|| get_context()).to_string();
     let prompt_data = prompts::PromptData::Tell(prompts::TellReplacements {
         username,
@@ -86,12 +82,12 @@ mod tests {
     #[test]
     fn test_get_context() {
         let context = get_context();
-        
+
         assert_eq!(context.mood, "satisfied");
         assert!(context.summary.contains("job search frustrations"));
         assert_eq!(context.summary_history.len(), 4);
         assert_eq!(context.tell_history.len(), 4);
-        
+
         assert!(context.summary_history[0].contains("Hopeful, determined"));
         assert!(context.tell_history[0].contains("Another day of no job"));
     }
