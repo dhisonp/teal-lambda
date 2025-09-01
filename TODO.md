@@ -1,0 +1,15 @@
+- [ ] Get tells
+- [ ] `get_context()`` business logic
+- [ ] Check if user exists on tell()
+- [ ] User auth
+  - [ ] Handle duplicate emails
+  - [ ] Create user with Passkey
+  - [ ] Store user data
+  - [ ] Tell the user based on user data
+- [ ] Security
+  - [ ] Auth tokens
+- [ ] Refine tell/summary/state model
+- [ ] Set up API Gateway
+- [ ] Add logging
+- [ ] Update user data on tells
+- [ ] Single prompts per call
